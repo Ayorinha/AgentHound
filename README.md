@@ -8,7 +8,6 @@ AgentHound analyzes multi-agent architecture definitions (CrewAI, Dify, LangGrap
 
 ## Repository layout
 
-- [`Docs/`](Docs/) — Reference diagrams, the BlackHat tool overview (`BlackHat AI Agent Tool.pdf`), and third-party license notices.
 - [`Backend/`](Backend/) — FastAPI backend service (Pydantic v2 + NetworkX). See [`Backend/app/docs/README.md`](Backend/app/docs/README.md) for backend-only details.
 - [`Frontend/`](Frontend/) — Next.js + Mistica web app. The threat-model wizard uploads an architecture YAML, calls the backend, and renders the capability graph, findings, and risk metrics. See [`Frontend/README.md`](Frontend/README.md).
 - [`examples/`](examples/) — Engine-verified example architectures (four progressive scenarios as CrewAI, Dify, LangGraph, and generic YAML, plus a risky/safe pair migrated from an earlier proof of concept) with per-scenario notes, usable as a demo set and regression bank. See [`examples/README.md`](examples/README.md).
