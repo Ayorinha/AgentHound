@@ -1,0 +1,22 @@
+# Example 3 - Operations assistant with destructive actions (Dify). Same case.
+# Expected findings: FH-011 (+ FH-002).
+app:
+  name: IT Ops Assistant (risky)
+workflow:
+  graph:
+    nodes:
+      - id: n_start
+        data: {type: start, title: Inbound maintenance ticket email}
+      - id: n_llm
+        data: {type: llm, title: Operations Executor}
+      - id: n_del
+        data: {type: tool, title: Customer Records Delete}
+      - id: n_upd
+        data: {type: tool, title: CRM Records Update}
+      - id: n_answer
+        data: {type: answer, title: Maintenance report}
+    edges:
+      - {source: n_start, target: n_llm}
+      - {source: n_llm, target: n_del}
+      - {source: n_llm, target: n_upd}
+      - {source: n_del, target: n_answer}

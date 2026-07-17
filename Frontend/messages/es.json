@@ -1,0 +1,265 @@
+{
+  "common": {
+    "comingSoon": "Próximamente",
+    "noResults": "No se han encontrado resultados",
+    "error": {
+      "description": "No se ha podido cargar el contenido. Inténtalo de nuevo."
+    },
+    "loading": {
+      "generic": "Cargando..."
+    },
+    "actions": {
+      "retry": "Reintentar"
+    },
+    "pagination": {
+      "previous": "Página anterior",
+      "next": "Página siguiente",
+      "page": "Página {page}"
+    }
+  },
+  "cover": {
+    "brand": "AgentHound",
+    "title": "Analiza el modelo de tu agente",
+    "subtitle": "Prueba la arquitectura de tu agente de IA y detecta rutas de capacidad peligrosas antes que los atacantes",
+    "cta": "Empezar"
+  },
+  "layout": {
+    "desktopGuard": {
+      "title": "Versión de escritorio",
+      "description": "AgentHound está diseñado para resoluciones de escritorio. Accede desde un dispositivo con una pantalla más grande o amplía la ventana del navegador.",
+      "minWidth": "Ancho mínimo {width}px"
+    },
+    "languageSelector": "Cambiar idioma a inglés",
+    "nav": {
+      "overview": "Resumen",
+      "results": "Resultados"
+    },
+    "sidebar": {
+      "collapse": "Colapsar menú",
+      "testsSection": "Pruebas",
+      "themeToDark": "Cambiar a modo oscuro",
+      "themeToLight": "Cambiar a modo claro"
+    }
+  },
+  "overview": {
+    "title": "Resumen",
+    "description": "Prueba la arquitectura de tu agente de IA y detecta rutas de capacidad peligrosas antes que los atacantes.",
+    "newThreatModel": "Nueva prueba",
+    "kpis": {
+      "totalModels": "Pruebas totales",
+      "critical": "Pruebas de riesgo crítico o alto",
+      "medium": "Pruebas de riesgo medio o bajo",
+      "clean": "Pruebas sin hallazgos"
+    },
+    "listTitle": "Tus pruebas",
+    "emptyTitle": "Crea tu primera prueba",
+    "loadError": "No se pudieron cargar tus pruebas.",
+    "back": "Volver al resumen",
+    "delete": {
+      "action": "Eliminar {name}",
+      "title": "Eliminar prueba",
+      "message": "¿Eliminar «{name}»? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar",
+      "errorTitle": "No se pudo eliminar la prueba",
+      "errorMessage": "Algo salió mal al eliminar la prueba. Inténtalo de nuevo."
+    },
+    "severity": {
+      "critical": "Crítico",
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo",
+      "none": "Limpio"
+    }
+  },
+  "wizard": {
+    "back": "Atrás",
+    "next": "Siguiente",
+    "untitled": "Nueva prueba",
+    "progressLabel": "Progreso de creación de la prueba",
+    "steps": {
+      "configuration": "Configuración",
+      "inference": "Inferencia",
+      "results": "Resultados"
+    }
+  },
+  "configuration": {
+    "heading": "Configuración",
+    "subtitle": "Rellena la información que conozcas del servicio a testear.",
+    "nameLabel": "Nombre del análisis",
+    "namePlaceholder": "p. ej. HireSmart Copilot Producción",
+    "providerLabel": "Framework",
+    "requiredTag": "Obligatorio",
+    "removeFile": "Eliminar archivo",
+    "uploadError": "Se produjo un error al subir el archivo",
+    "fileAgentsTitle": "agents.yaml",
+    "fileAgentsDesc": "Definiciones de agentes: roles, objetivos, herramientas asignadas.",
+    "fileTasksTitle": "tasks.yaml",
+    "fileTasksDesc": "Definiciones de tareas: descripción, agente asignado, resultados esperados.",
+    "fileWorkflowTitle": "workflow.yaml",
+    "fileWorkflowDesc": "Definición completa del flujo: nodos, conexiones, herramientas y salidas.",
+    "chooseFileButton": "Elegir archivo",
+    "filesRequired": "Sube al menos un archivo YAML para analizar.",
+    "exportHelpLink": "¿Cómo puedo exportar el archivo yaml?",
+    "analyzeButton": "Analizar"
+  },
+  "processing": {
+    "title": "Leyendo la arquitectura del agente…",
+    "subtitle": "YAML → normalización IR → grafo de capacidades",
+    "progressLabel": "Progreso",
+    "doneTitle": "Arquitectura procesada",
+    "doneDesc": "{findings} hallazgos detectados · {critical} críticos · puntuación máxima {maxScore} · {agents} agentes",
+    "errorTitle": "El procesado ha fallado"
+  },
+  "inference": {
+    "heading": "Agentes y capacidades",
+    "subtitle": "Cada agente encontrado en tu YAML, con los inputs, herramientas, datos, memoria y delegaciones con los que fue definido.",
+    "viewResults": "Ver resultados",
+    "trustBadge": "confianza: {value}",
+    "autonomyBadge": "autonomía: {value}",
+    "receivesFrom": "Recibe de",
+    "usesTools": "Usa herramientas",
+    "dataAccess": "Lee / escribe datos",
+    "memoryAccess": "Memoria",
+    "delegatesTo": "Delega en",
+    "sendsTo": "Envía a",
+    "otherConnections": "Otras conexiones",
+    "emptyTitle": "No se detectaron agentes",
+    "emptyDesc": "El YAML subido no produjo ningún nodo de tipo agente.",
+    "agentNameField": "Nombre",
+    "targetLabelField": "Nombre",
+    "targetLabelPlaceholder": "p. ej. Internal Drive, gmail.send…",
+    "delegateTargetField": "Agente",
+    "addButton": "Añadir",
+    "cancelButton": "Cancelar",
+    "removeLink": "Quitar",
+    "calloutTitle": "Esto refleja lo extraído de tu YAML",
+    "calloutDesc": "Corrige aquí lo que la extracción haya detectado mal — añade una capacidad que se le haya escapado o elimina alguna que no aplique. No modifica tu YAML subido, pero al continuar a Resultados los hallazgos, puntuaciones y recuentos se recalculan a partir de tus cambios. Los controles de seguridad no forman parte de esta vista: no están en el YAML, son lo que recomienda el análisis, así que los encontrarás en Resultados.",
+    "editAgent": "Editar agente",
+    "editAgentTitle": "Editar agente",
+    "editAgentDesc": "Arrastra capacidades del catálogo sobre el agente, o quita las que no apliquen. También puedes renombrar el agente.",
+    "catalogTitle": "Catálogo de capacidades",
+    "catalogHint": "Arrastra una capacidad sobre el agente, o haz clic para añadirla.",
+    "detectedCapabilities": "Capacidades detectadas",
+    "addingCapability": "Añadiendo \"{capability}\" a {row}",
+    "dropHint": "Aún no hay capacidades. Arrastra una aquí desde el catálogo.",
+    "saveButton": "Guardar"
+  },
+  "results": {
+    "dashboard": {
+      "title": "Resultados",
+      "subtitle": "Riesgo agregado de todas tus pruebas analizadas.",
+      "loadError": "No se pudieron cargar tus resultados.",
+      "emptyTitle": "Aún no hay resultados",
+      "emptyDescription": "Ejecuta tu primera prueba para ver aquí el riesgo agregado.",
+      "kpis": {
+        "totalTests": "Pruebas analizadas",
+        "totalFindings": "Hallazgos totales",
+        "totalCritical": "Hallazgos críticos",
+        "criticalRate": "Pruebas con críticos",
+        "avgMaxScore": "Puntuación máx. media"
+      },
+      "back": "Volver a resultados",
+      "worstTitle": "Pruebas de mayor riesgo",
+      "maxScoreLabel": "puntuación máx. {score}",
+      "frameworkTitle": "Hallazgos por framework",
+      "frameworkRow": "{tests} pruebas · {findings} hallazgos"
+    },
+    "title": "Análisis de amenazas",
+    "subtitleTemplate": "{agents} agentes · {tools} herramientas · {data} activos de datos · {findings} hallazgos · {critical} rutas de ataque críticas detectadas",
+    "tabFindings": "Hallazgos",
+    "tabProposedSolution": "Solución propuesta",
+    "graphTitleFindings": "Grafo de capacidades — Rutas de ataque",
+    "graphTitleSolution": "Grafo de capacidades resuelto",
+    "graphDescFindings": "Rutas de ataque críticas resaltadas. Haz clic en cualquier nodo para inspeccionarlo. Los controles marcados están ausentes.",
+    "graphDescSolution": "Rutas de ataque neutralizadas tras aplicar los controles. Nodos rojos resueltos a verde.",
+    "graphHint": "Haz zoom, desplaza y arrastra los nodos · haz clic en un nodo para ver sus detalles",
+    "downloadSvg": "Descargar SVG",
+    "downloadPng": "PNG",
+    "playAttack": "Reproducir ataque",
+    "stopAttack": "Detener",
+    "fitView": "Ajustar",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "legend": {
+      "danger": "Ruta de ataque",
+      "safe": "Capacidad segura",
+      "blocked": "Bloqueada (control)",
+      "mitigated": "Mitigada (control)",
+      "pathSeverity": "Severidad de la ruta",
+      "primaryRoute": "Ruta principal {id}",
+      "high": "Ruta de hallazgo alto",
+      "medium": "Ruta de hallazgo medio",
+      "low": "Ruta de hallazgo bajo",
+      "info": "Ruta de hallazgo informativo",
+      "nodeTypes": "Tipos de nodo",
+      "node": {
+        "input": "Punto de entrada",
+        "agent": "Agente",
+        "memory": "Memoria",
+        "tool": "Herramienta",
+        "data": "Almacén de datos",
+        "output": "Salida"
+      }
+    },
+    "solvedBanner": "Todas las rutas de ataque críticas resueltas · {count} controles activados",
+    "primaryPath": "Ruta crítica principal",
+    "prioritizedFindings": "Hallazgos priorizados ({count})",
+    "findingSummary": "{title} · puntuación {score}",
+    "chokepointTitle": "Punto de control recomendado",
+    "chokepointDesc": "Aplica {control} en {node} — elimina {reduction} pts · {pct}% reducción de riesgo (coste: {cost})",
+    "metricsTitleFindings": "Métricas de riesgo",
+    "metricsTitleSolution": "Métricas post-remediación",
+    "before": "Antes",
+    "after": "Después",
+    "kpis": {
+      "critical": "Crítico",
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo",
+      "maxScore": "Puntuación máxima",
+      "agents": "Agentes"
+    },
+    "beforeAfter": {
+      "findingCount": "Hallazgos",
+      "criticalCount": "Hallazgos críticos",
+      "maxScore": "Puntuación máxima",
+      "riskScoreTotal": "Puntuación de riesgo total",
+      "riskReduction": "Reducción de riesgo"
+    },
+    "findingsTableTitle": "Hallazgos inferidos",
+    "attackFindingsTitle": "Rutas de ataque",
+    "hygieneTitle": "Higiene y cumplimiento",
+    "tableHeaders": {
+      "id": "ID",
+      "score": "Puntuación",
+      "severity": "Severidad",
+      "title": "Título",
+      "references": "OWASP / MITRE"
+    },
+    "controlsTitle": "Controles recomendados",
+    "resolved": "Resuelto",
+    "exportTitleFindings": "Exportar YAML con anotaciones de hallazgos",
+    "exportDescFindings": "Incluye hallazgos inferidos con referencias OWASP, MITRE ATT&CK y controles recomendados.",
+    "exportTitleSolution": "Exportar YAML con anotaciones de la solución propuesta",
+    "exportDescSolution": "Incluye controles recomendados, rutas rotas y métricas de reducción de riesgo.",
+    "exportButton": "Exportar YAML",
+    "exportReportMd": "Reporte (Markdown)",
+    "exportGraphJson": "Grafo (JSON)",
+    "exportFindingsJson": "Hallazgos (JSON)"
+  },
+  "node": {
+    "properties": "Propiedades",
+    "attackPaths": "Rutas de ataque a través de este nodo",
+    "recommendedControls": "Controles recomendados",
+    "controlEffect": {
+      "total": "Bloquea",
+      "partial": "Mitiga"
+    },
+    "present": "presente",
+    "absent": "ausente",
+    "deleteNode": "Eliminar nodo",
+    "riskScore": "Puntuación de riesgo",
+    "evidence": "Evidencia"
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "common": {
+    "comingSoon": "Coming soon",
+    "noResults": "No results found",
+    "error": {
+      "description": "Couldn't load the content. Please try again."
+    },
+    "loading": {
+      "generic": "Loading..."
+    },
+    "actions": {
+      "retry": "Retry"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}"
+    }
+  },
+  "cover": {
+    "brand": "AgentHound",
+    "title": "Analyze your agent model",
+    "subtitle": "Test your AI Agent architecture and detect dangerous capability paths before attackers do",
+    "cta": "Start"
+  },
+  "layout": {
+    "desktopGuard": {
+      "title": "Desktop version",
+      "description": "AgentHound is designed for desktop resolutions. Please access from a device with a larger screen or expand the browser window.",
+      "minWidth": "Minimum {width}px wide"
+    },
+    "languageSelector": "Switch language to Spanish",
+    "nav": {
+      "overview": "Overview",
+      "results": "Results"
+    },
+    "sidebar": {
+      "collapse": "Collapse menu",
+      "testsSection": "Tests",
+      "themeToDark": "Switch to dark mode",
+      "themeToLight": "Switch to light mode"
+    }
+  },
+  "overview": {
+    "title": "Overview",
+    "description": "Test your AI Agent architecture and detect dangerous capability paths before attackers do.",
+    "newThreatModel": "New test",
+    "kpis": {
+      "totalModels": "Total tests",
+      "critical": "Critical or high risk tests",
+      "medium": "Medium or low risk tests",
+      "clean": "Tests without findings"
+    },
+    "listTitle": "Your tests",
+    "emptyTitle": "Create your first test",
+    "loadError": "Could not load your tests.",
+    "back": "Back to overview",
+    "delete": {
+      "action": "Delete {name}",
+      "title": "Delete test",
+      "message": "Delete \"{name}\"? This action can't be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "errorTitle": "Couldn't delete the test",
+      "errorMessage": "Something went wrong deleting the test. Please try again."
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "none": "Clean"
+    }
+  },
+  "wizard": {
+    "back": "Back",
+    "next": "Next",
+    "untitled": "New test",
+    "progressLabel": "Test creation progress",
+    "steps": {
+      "configuration": "Configuration",
+      "inference": "Inference",
+      "results": "Results"
+    }
+  },
+  "configuration": {
+    "heading": "Configuration",
+    "subtitle": "Fill in the information you know about the service to test.",
+    "nameLabel": "Analysis name",
+    "namePlaceholder": "e.g. HireSmart Copilot Production",
+    "providerLabel": "Framework",
+    "requiredTag": "Required",
+    "removeFile": "Remove file",
+    "uploadError": "An upload error occurred",
+    "fileAgentsTitle": "agents.yaml",
+    "fileAgentsDesc": "Agent definitions: roles, goals, assigned tools.",
+    "fileTasksTitle": "tasks.yaml",
+    "fileTasksDesc": "Task definitions: description, assigned agent, expected outputs.",
+    "fileWorkflowTitle": "workflow.yaml",
+    "fileWorkflowDesc": "Full workflow definition: nodes, connections, tools and outputs.",
+    "chooseFileButton": "Choose file",
+    "filesRequired": "Upload at least one YAML file to analyze.",
+    "exportHelpLink": "How can I export the yaml file?",
+    "analyzeButton": "Analyze"
+  },
+  "processing": {
+    "title": "Reading agent architecture…",
+    "subtitle": "YAML → IR normalization → capability graph",
+    "progressLabel": "Progress",
+    "doneTitle": "Architecture parsed",
+    "doneDesc": "{findings} findings detected · {critical} critical · max score {maxScore} · {agents} agents",
+    "errorTitle": "Parsing failed"
+  },
+  "inference": {
+    "heading": "Agents and capabilities",
+    "subtitle": "Every agent found in your YAML, with the inputs, tools, data, memory and delegations it was defined with.",
+    "viewResults": "View Results",
+    "trustBadge": "trust: {value}",
+    "autonomyBadge": "autonomy: {value}",
+    "receivesFrom": "Receives from",
+    "usesTools": "Uses tools",
+    "dataAccess": "Reads / writes data",
+    "memoryAccess": "Memory",
+    "delegatesTo": "Delegates to",
+    "sendsTo": "Sends to",
+    "otherConnections": "Other connections",
+    "emptyTitle": "No agents detected",
+    "emptyDesc": "The uploaded YAML did not yield any agent node.",
+    "agentNameField": "Name",
+    "targetLabelField": "Name",
+    "targetLabelPlaceholder": "e.g. Internal Drive, gmail.send…",
+    "delegateTargetField": "Agent",
+    "addButton": "Add",
+    "cancelButton": "Cancel",
+    "removeLink": "Remove",
+    "calloutTitle": "This reflects what was extracted from your YAML",
+    "calloutDesc": "Correct anything the extraction got wrong here — add a capability it missed or remove one that doesn't apply. It won't change your uploaded YAML, but when you continue to Results the findings, scores and counts are recomputed from your edits. Security controls aren't part of this view: they're not in the YAML, they're what the analysis recommends, so you'll find them in Results.",
+    "editAgent": "Edit agent",
+    "editAgentTitle": "Edit agent",
+    "editAgentDesc": "Drag capabilities from the catalog onto the agent, or remove the ones that don't apply. You can also rename the agent.",
+    "catalogTitle": "Capability catalog",
+    "catalogHint": "Drag a capability onto the agent, or click it to add.",
+    "detectedCapabilities": "Detected capabilities",
+    "addingCapability": "Adding \"{capability}\" to {row}",
+    "dropHint": "No capabilities yet. Drag one here from the catalog.",
+    "saveButton": "Save"
+  },
+  "results": {
+    "dashboard": {
+      "title": "Results",
+      "subtitle": "Aggregate risk across all your analyzed tests.",
+      "loadError": "Could not load your results.",
+      "emptyTitle": "No results yet",
+      "emptyDescription": "Run your first test to see aggregate risk here.",
+      "kpis": {
+        "totalTests": "Tests analyzed",
+        "totalFindings": "Total findings",
+        "totalCritical": "Critical findings",
+        "criticalRate": "Tests with criticals",
+        "avgMaxScore": "Avg. max score"
+      },
+      "back": "Back to results",
+      "worstTitle": "Highest-risk tests",
+      "maxScoreLabel": "max score {score}",
+      "frameworkTitle": "Findings by framework",
+      "frameworkRow": "{tests} tests · {findings} findings"
+    },
+    "title": "Threat Analysis",
+    "subtitleTemplate": "{agents} agents · {tools} tools · {data} data assets · {findings} findings · {critical} critical attack routes detected",
+    "tabFindings": "Findings",
+    "tabProposedSolution": "Proposed Solution",
+    "graphTitleFindings": "Capability Graph — Attack Paths",
+    "graphTitleSolution": "Resolved Capability Graph",
+    "graphDescFindings": "Critical attack routes highlighted. Click any node to inspect. Controls marked are absent.",
+    "graphDescSolution": "Attack paths neutralized after applying controls. Red nodes resolved to green.",
+    "graphHint": "Zoom, pan and drag the nodes · click any node to inspect details",
+    "downloadSvg": "Download SVG",
+    "downloadPng": "PNG",
+    "playAttack": "Play attack",
+    "stopAttack": "Stop",
+    "fitView": "Fit",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "legend": {
+      "danger": "Attack path",
+      "safe": "Safe capability",
+      "blocked": "Blocked (control)",
+      "mitigated": "Mitigated (control)",
+      "pathSeverity": "Path severity",
+      "primaryRoute": "{id} primary route",
+      "high": "High finding path",
+      "medium": "Medium finding path",
+      "low": "Low finding path",
+      "info": "Info finding path",
+      "nodeTypes": "Node types",
+      "node": {
+        "input": "Entry point",
+        "agent": "Agent",
+        "memory": "Memory",
+        "tool": "Tool",
+        "data": "Data store",
+        "output": "Output"
+      }
+    },
+    "solvedBanner": "All critical attack paths resolved · {count} controls activated",
+    "primaryPath": "Primary critical path",
+    "prioritizedFindings": "Prioritized findings ({count})",
+    "findingSummary": "{title} · score {score}",
+    "chokepointTitle": "Recommended choke point",
+    "chokepointDesc": "Apply {control} on {node} — eliminates {reduction} pts · {pct}% risk reduction (cost: {cost})",
+    "metricsTitleFindings": "Risk Metrics",
+    "metricsTitleSolution": "Post-remediation Metrics",
+    "before": "Before",
+    "after": "After",
+    "kpis": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "maxScore": "Max score",
+      "agents": "Agents"
+    },
+    "beforeAfter": {
+      "findingCount": "Findings",
+      "criticalCount": "Critical findings",
+      "maxScore": "Max score",
+      "riskScoreTotal": "Total risk score",
+      "riskReduction": "Risk reduction"
+    },
+    "findingsTableTitle": "Inferred Findings",
+    "attackFindingsTitle": "Attack Paths",
+    "hygieneTitle": "Hygiene & Compliance",
+    "tableHeaders": {
+      "id": "ID",
+      "score": "Score",
+      "severity": "Severity",
+      "title": "Title",
+      "references": "OWASP / MITRE"
+    },
+    "controlsTitle": "Recommended Controls",
+    "resolved": "Resolved",
+    "exportTitleFindings": "Export YAML with finding annotations",
+    "exportDescFindings": "Includes inferred findings with OWASP, MITRE ATT&CK references and recommended controls.",
+    "exportTitleSolution": "Export YAML with proposed solution annotations",
+    "exportDescSolution": "Includes recommended controls, broken paths and risk reduction metrics.",
+    "exportButton": "Export YAML",
+    "exportReportMd": "Report (Markdown)",
+    "exportGraphJson": "Graph (JSON)",
+    "exportFindingsJson": "Findings (JSON)"
+  },
+  "node": {
+    "properties": "Properties",
+    "attackPaths": "Attack paths through this node",
+    "recommendedControls": "Recommended controls",
+    "controlEffect": {
+      "total": "Blocks",
+      "partial": "Mitigates"
+    },
+    "present": "present",
+    "absent": "absent",
+    "deleteNode": "Delete node",
+    "riskScore": "Risk score",
+    "evidence": "Evidence"
+  }
+}

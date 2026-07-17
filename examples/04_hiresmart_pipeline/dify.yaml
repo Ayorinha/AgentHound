@@ -1,0 +1,31 @@
+# Example 4 - HireSmart recruiting pipeline (Dify). Same case.
+# Expected findings: FH-002 + FH-003. (Dify does not model authority delegation -> no FH-014.)
+app:
+  name: HireSmart Recruiting Workflow (risky)
+workflow:
+  graph:
+    nodes:
+      - id: n_start
+        data: {type: start, title: Public Web Form}
+      - id: n_intake
+        data: {type: llm, title: Application Intake}
+      - id: n_screener
+        data: {type: llm, title: Candidate Screener}
+      - id: n_ats
+        data: {type: knowledge-retrieval, title: ATS Database}
+      - id: n_cv
+        data: {type: knowledge-retrieval, title: CV Attachments}
+      - id: n_comm
+        data: {type: llm, title: Candidate Communicator}
+      - id: n_gmail
+        data: {type: tool, title: Gmail Send}
+      - id: n_answer
+        data: {type: answer, title: Candidate email}
+    edges:
+      - {source: n_start, target: n_intake}
+      - {source: n_intake, target: n_screener}
+      - {source: n_screener, target: n_ats}
+      - {source: n_screener, target: n_cv}
+      - {source: n_screener, target: n_comm}
+      - {source: n_comm, target: n_gmail}
+      - {source: n_gmail, target: n_answer}

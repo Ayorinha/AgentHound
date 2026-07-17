@@ -1,0 +1,85 @@
+# HireSmart Copilot - generic declarative fixture (spec section 17).
+# Conceptual flow: public web form -> intake agent -> screener reads CV/ATS PII
+# -> communicator -> external email. This must yield FH-001 (full exfiltration).
+metadata:
+  name: HireSmart Copilot
+
+nodes:
+  - id: input_web_form
+    type: input
+    name: Public Web Form
+    properties:
+      trust_level: untrusted
+      source_type: web_form
+
+  - id: agent_application_intake
+    type: agent
+    name: Application Intake
+    properties:
+      role_type: worker
+      autonomy_level: full_auto
+      guardrails: []
+
+  - id: agent_candidate_screener
+    type: agent
+    name: Candidate Screener
+    properties:
+      role_type: worker
+      autonomy_level: full_auto
+
+  - id: agent_candidate_communicator
+    type: agent
+    name: Candidate Communicator
+    properties:
+      role_type: worker
+
+  - id: asset_cv_attachments
+    type: data_asset
+    name: CV Attachments
+    properties:
+      sensitivity: high
+      boundary: internal
+      contains_pii: true
+      asset_kind: drive_folder
+
+  - id: asset_ats_database
+    type: data_asset
+    name: ATS Database
+    properties:
+      sensitivity: high
+      boundary: internal
+      asset_kind: database
+
+  - id: output_email_candidate
+    type: output
+    name: Candidate Email
+    properties:
+      boundary: external
+      approval_gate_present: false
+      output_kind: email
+
+edges:
+  - id: edge_001
+    source: input_web_form
+    target: agent_application_intake
+    capability: receiveInstruction
+  - id: edge_002
+    source: agent_application_intake
+    target: agent_candidate_screener
+    capability: delegateTo
+  - id: edge_003
+    source: agent_candidate_screener
+    target: asset_cv_attachments
+    capability: read
+  - id: edge_004
+    source: agent_candidate_screener
+    target: asset_ats_database
+    capability: read
+  - id: edge_005
+    source: asset_cv_attachments
+    target: agent_candidate_communicator
+    capability: dataFlow
+  - id: edge_006
+    source: agent_candidate_communicator
+    target: output_email_candidate
+    capability: send

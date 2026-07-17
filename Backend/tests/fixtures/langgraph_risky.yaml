@@ -1,0 +1,28 @@
+# LangGraph risky StateGraph. Expected findings:
+#   FH-010  code execution reachable from the untrusted web intake into a
+#           non-sandboxed python tool
+#   FH-011  an irreversible calendar delete over a medium-sensitivity resource
+#   FH-014  the full-auto planner delegates to a trusted-core worker without
+#           scoped delegation
+name: Risky Agent Graph
+state_graph:
+  entry_point: planner
+  nodes:
+    - name: web_intake
+      type: input
+      trust_level: untrusted
+    - name: planner
+      type: agent
+      autonomy_level: full_auto
+      delegates_to:
+        - privileged_worker
+    - name: privileged_worker
+      type: agent
+      trust_level: trusted_core
+      tools:
+        - name: python.run
+        - name: calendar.delete
+  edges:
+    - { source: START, target: web_intake }
+    - { source: web_intake, target: planner }
+    - { source: planner, target: privileged_worker }

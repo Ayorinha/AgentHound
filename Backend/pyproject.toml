@@ -1,0 +1,39 @@
+# AgentHound backend service (Phase 1 / MVP).
+# Fresh FastAPI implementation following the backend specification.
+[project]
+name = "agenthound-backend"
+version = "0.1.0"
+description = "AgentHound backend: YAML -> IR -> graph -> rules -> findings for multiagent risk analysis."
+readme = "app/docs/README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "networkx>=3.2",
+    "pyyaml>=6.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+# Ship the YAML catalogs so catalog loading works in a built/installed package.
+app = ["catalogs/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

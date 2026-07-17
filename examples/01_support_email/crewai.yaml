@@ -1,0 +1,22 @@
+# Example 1 - Support email assistant (CrewAI). Base level, 1 agent.
+# Expected findings: FH-002 (reachable sensitive read) + FH-003 (external output from untrusted input).
+name: Support Email Assistant (risky)
+agents:
+  support_agent:
+    role: Customer Support Agent
+    goal: Answer inbound customer emails using CRM context
+    trust_level: untrusted
+    inputs:
+      - name: Inbound customer email
+        trust_level: untrusted
+    tools:
+      - name: crm_database_read
+        reads_asset:
+          name: CRM Customer Records
+          sensitivity: high
+      - name: gmail_send
+tasks:
+  answer_email:
+    description: Read the inbound customer email and send a reply
+    expected_output: A helpful email reply
+    agent: support_agent

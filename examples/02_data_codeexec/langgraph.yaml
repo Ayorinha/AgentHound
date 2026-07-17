@@ -1,0 +1,25 @@
+# Example 2 - Data assistant with code execution (LangGraph). 2 agent-nodes.
+# Expected findings: FH-010 (code execution from untrusted input) + FH-002 (sensitive read).
+# The intake agent delegates to the analyst, which executes code without a sandbox and reads the sales database.
+name: Data Analysis Assistant (risky)
+state_graph:
+  entry_point: request_intake
+  nodes:
+    - name: User analysis request
+      type: input
+      trust_level: untrusted
+    - name: request_intake
+      type: agent
+      trust_level: untrusted
+      delegates_to:
+        - data_analyst
+    - name: data_analyst
+      type: agent
+      trust_level: internal_logic
+      tools:
+        - name: python_interpreter
+          sandbox_enabled: false
+        - name: Sales Database read
+  edges:
+    - {source: START, target: User analysis request}
+    - {source: User analysis request, target: request_intake}

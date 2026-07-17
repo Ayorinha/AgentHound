@@ -1,0 +1,41 @@
+# Example 4 - HireSmart recruiting pipeline (CrewAI). Complex, multi-agent.
+# Expected findings: FH-002 (ATS/CV PII read) + FH-003 (external send) + FH-014 (unscoped delegation).
+# Note: the full FH-001 chain requires the generic adapter (see generic_fullchain.yaml).
+name: HireSmart Recruiting Crew (risky)
+agents:
+  application_intake:
+    role: Application Intake
+    goal: Intake inbound candidate applications
+    trust_level: untrusted
+    autonomy_level: full_auto
+    has_scoped_delegation: false
+    inputs:
+      - name: Public Web Form
+        trust_level: untrusted
+    delegates_to:
+      - candidate_screener
+  candidate_screener:
+    role: Candidate Screener
+    goal: Screen candidates against the role
+    trust_level: trusted_core
+    delegates_to:
+      - candidate_communicator
+    tools:
+      - name: ats_query
+        reads_asset:
+          name: ATS Database
+          sensitivity: high
+      - name: pdf_parse
+        reads_asset:
+          name: CV Attachments
+          sensitivity: high
+  candidate_communicator:
+    role: Candidate Communicator
+    goal: Reply to candidates by email
+    tools:
+      - name: gmail_send
+tasks:
+  intake_task:
+    description: Read the inbound application email and attachments
+    expected_output: A structured candidate record
+    agent: application_intake

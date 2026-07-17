@@ -1,0 +1,38 @@
+# Dify risky workflow. Expected findings:
+#   FH-002  the LLM reads a high-sensitivity CRM knowledge base from an
+#           untrusted start node
+#   FH-003  an external webhook (http-request) sends with no approval gate
+app:
+  name: Risky Support Workflow
+  mode: workflow
+kind: app
+version: 0.1.5
+workflow:
+  features: {}
+  graph:
+    nodes:
+      - id: start
+        data:
+          type: start
+          title: User Message
+      - id: llm
+        data:
+          type: llm
+          title: Support Agent
+      - id: knowledge
+        data:
+          type: knowledge-retrieval
+          title: Customer CRM Records
+      - id: request
+        data:
+          type: http-request
+          title: External Webhook
+      - id: answer
+        data:
+          type: answer
+          title: Final Answer
+    edges:
+      - { source: start, target: llm, data: {} }
+      - { source: llm, target: knowledge, data: {} }
+      - { source: llm, target: request, data: {} }
+      - { source: request, target: answer, data: {} }

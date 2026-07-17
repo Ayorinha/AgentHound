@@ -1,0 +1,29 @@
+# Example 2 - Data assistant with code execution (CrewAI). 2 agents.
+# Expected findings: FH-010 (code execution from untrusted input) + FH-002 (sensitive read).
+name: Data Analysis Assistant (risky)
+agents:
+  request_intake:
+    role: Request Intake
+    goal: Receive the user's analysis request
+    trust_level: untrusted
+    inputs:
+      - name: User analysis request
+        trust_level: untrusted
+    delegates_to:
+      - data_analyst
+  data_analyst:
+    role: Data Analyst
+    goal: Run code to analyse the requested dataset
+    trust_level: internal_logic
+    tools:
+      - name: python_interpreter
+        sandbox_enabled: false
+      - name: warehouse_database_read
+        reads_asset:
+          name: Sales Database
+          sensitivity: high
+tasks:
+  analyse:
+    description: Handle the user request and analyse the dataset
+    expected_output: An analysis summary
+    agent: request_intake

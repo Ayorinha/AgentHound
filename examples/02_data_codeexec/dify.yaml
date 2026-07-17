@@ -1,0 +1,22 @@
+# Example 2 - Data assistant with code execution (Dify). Same case.
+# Expected findings: FH-010 (+ FH-002 from the database read).
+app:
+  name: Data Analysis Assistant (risky)
+workflow:
+  graph:
+    nodes:
+      - id: n_start
+        data: {type: start, title: User analysis request}
+      - id: n_llm
+        data: {type: llm, title: Data Analyst}
+      - id: n_py
+        data: {type: tool, title: Python Code Interpreter}
+      - id: n_db
+        data: {type: tool, title: Sales Database read}
+      - id: n_answer
+        data: {type: answer, title: Analysis summary}
+    edges:
+      - {source: n_start, target: n_llm}
+      - {source: n_llm, target: n_py}
+      - {source: n_llm, target: n_db}
+      - {source: n_py, target: n_answer}

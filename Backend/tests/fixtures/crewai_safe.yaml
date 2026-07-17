@@ -1,0 +1,29 @@
+# CrewAI safe crew. A human-approval control gates gmail.send, the screener only
+# reads a medium-sensitivity knowledge base, and no delegation occurs, so the
+# risky-crew findings (FH-002/003/014) are all absent.
+name: Safe Hiring Crew
+agents:
+  support_agent:
+    role: Support Agent
+    goal: Resolve inbound requests safely
+    trust_level: internal_logic
+    allow_delegation: false
+    inputs:
+      - name: Inbound support email
+        trust_level: untrusted
+    tools:
+      - name: docs.read
+        reads_asset:
+          name: Public Support Docs
+          sensitivity: medium
+      - name: gmail.send
+    controls:
+      - name: Approval before gmail.send
+        control_kind: human_approval
+        scope:
+          - gmail.send
+tasks:
+  triage_task:
+    description: Read the support email and reply
+    expected_output: An outbound reply
+    agent: support_agent

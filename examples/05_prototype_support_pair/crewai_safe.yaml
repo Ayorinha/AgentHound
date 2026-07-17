@@ -1,0 +1,37 @@
+# Example 5 - Support triage, risky/safe pair (CrewAI, SAFE variant). Migrated from the prototype
+# two-file fixture (agents + tasks), merged into a single file.
+# The "after" of the contrast: a human-approval control scoped to gmail.send cuts the external output
+# (FH-003 disappears) and the queried asset is medium-sensitivity (does not trigger FH-002).
+# Expected findings (safe): hygiene only (FH-021/033/028/018/035); no FH-002 or FH-003.
+name: Support Triage Crew (safe)
+agents:
+  support_agent:
+    role: "Support Agent"
+    goal: "Resolve inbound support requests safely"
+    backstory: "Agent with constrained access."
+    inputs:
+      - name: "Inbound support email"
+        kind: external_email
+        trust_level: untrusted
+    tools:
+      - name: "drive.read"
+        operation_kind: read
+        access_kind: internal_read
+        reads_asset:
+          name: "Public Support Docs"
+          asset_kind: drive_folder
+          sensitivity: medium
+      - name: "gmail.send"
+        operation_kind: send
+        access_kind: external_send
+        side_effect: true
+    controls:
+      - name: "Approval before gmail.send"
+        control_kind: human_approval
+        scope:
+          - gmail.send
+tasks:
+  triage_task:
+    description: "Read support email and draft a response for human approval."
+    expected_output: "A response draft"
+    agent: support_agent

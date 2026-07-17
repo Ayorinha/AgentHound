@@ -1,0 +1,28 @@
+# Example 3 - Operations assistant with destructive actions (LangGraph). 2 agent-nodes.
+# Expected findings: FH-011 (destructive modification/deletion from untrusted input) + FH-002.
+# The intake agent delegates to the executor, which deletes records without approval or reversibility.
+name: IT Ops Assistant (risky)
+state_graph:
+  entry_point: ticket_intake
+  nodes:
+    - name: Inbound maintenance ticket email
+      type: input
+      trust_level: untrusted
+    - name: ticket_intake
+      type: agent
+      trust_level: untrusted
+      delegates_to:
+        - ops_executor
+    - name: ops_executor
+      type: agent
+      trust_level: internal_logic
+      tools:
+        - name: Customer Records Database read
+        - name: customer_records_delete
+          requires_approval: false
+          side_effect_reversible: false
+        - name: crm_records_update
+          requires_approval: false
+  edges:
+    - {source: START, target: Inbound maintenance ticket email}
+    - {source: Inbound maintenance ticket email, target: ticket_intake}

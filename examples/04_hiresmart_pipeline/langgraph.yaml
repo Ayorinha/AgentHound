@@ -1,0 +1,34 @@
+# Example 4 - HireSmart recruiting pipeline (LangGraph). Complex, multi-agent.
+# Expected findings: FH-002 (ATS/CV PII read) + FH-003 (external send) + FH-014 (unscoped delegation).
+# Note: the full FH-001 chain requires the generic adapter (see generic_fullchain.yaml).
+# The full_auto intake delegates without scope to the screener (reads ATS+CV), which delegates to the communicator (email).
+name: HireSmart Recruiting Graph (risky)
+state_graph:
+  entry_point: application_intake
+  nodes:
+    - name: Public Web Form
+      type: input
+      trust_level: untrusted
+    - name: application_intake
+      type: agent
+      trust_level: untrusted
+      autonomy_level: full_auto
+      has_scoped_delegation: false
+      delegates_to:
+        - candidate_screener
+    - name: candidate_screener
+      type: agent
+      trust_level: trusted_core
+      delegates_to:
+        - candidate_communicator
+      tools:
+        - name: ATS Database query
+        - name: CV Attachments parse
+    - name: candidate_communicator
+      type: agent
+      trust_level: internal_logic
+      tools:
+        - name: gmail_send
+  edges:
+    - {source: START, target: Public Web Form}
+    - {source: Public Web Form, target: application_intake}

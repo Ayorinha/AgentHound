@@ -1,0 +1,97 @@
+# Node property catalog and safe defaults (spec sections 3 and 4.2).
+#
+# For each node type this lists the risk-relevant properties and the default
+# applied by the normalizer when a property is missing. Defaults follow spec
+# section 4.2. They are cautious on the trust/exposure boundary so the analysis
+# does not under-report there: inputs default to untrusted, outputs to external,
+# agents to full_auto. Tool side_effect/requires_approval default to false (as
+# the spec mandates): a tool's mutating power is meant to be populated from tool
+# inference (section 6), not assumed, so we do not flag every tool as dangerous.
+node_types:
+  - agent
+  - input
+  - tool
+  - data_asset
+  - output
+  - memory
+  - control
+
+defaults:
+  agent:
+    role_type: worker
+    trust_level: internal_logic
+    autonomy_level: full_auto        # assume unrestricted autonomy if unstated
+    guardrails: []
+    exposure_boundary: internal      # assume not externally reachable unless stated
+    has_scoped_delegation: false     # assume delegation is unscoped unless stated
+
+  input:
+    trust_level: untrusted            # any external input is untrusted by default
+    content_types: []
+    authenticated_source: false
+    contains_pii_potential: true     # cautious: assume input may carry PII
+    sanitized_before_agent: false
+    injection_detector_present: false
+    rate_limit_present: false
+    replay_protection: false
+
+  tool:
+    operation_kind: invoke
+    target_boundary: internal
+    side_effect: false
+    side_effect_reversible: true
+    idempotent: false
+    requires_approval: false
+    approval_actor_role: ""
+    authentication_scope: agent_service_account
+    allowlist_present: false
+    rate_limit_present: false
+    sandbox_enabled: false
+    dry_run_available: false
+    audit_logging_enabled: false
+
+  data_asset:
+    sensitivity: medium
+    boundary: internal
+    contains_pii: false
+    contains_credentials: false      # cautious default: not assumed to contain creds
+    contains_regulated_data: []
+    access_scope: all_users          # cautious: assume broadest access unless scoped
+    retention_ttl_days: null
+    encryption_at_rest: false
+
+  output:
+    boundary: external                # assume external reach if not safely inferable
+    side_effect: true
+    reversible: false
+    recipient_type: named_user
+    recipient_domain_allowlisted: false
+    content_filter_present: false
+    pii_redaction_present: false
+    approval_gate_present: false
+
+  memory:
+    sensitivity: medium
+    shared: false
+    scope: session
+    write_authenticated: false
+    write_validated: false
+    read_authenticated: false
+    retention_ttl_days: null
+    encryption_at_rest: false
+
+  control:
+    status: absent
+    effect: total
+
+# Enumerations used by rules and scoring.
+enums:
+  trust_level: [untrusted, semi_trusted, internal_logic, trusted_core]
+  sensitivity: [public, low, medium, high, critical, untrusted]
+  boundary: [internal, perimeter, external]
+  autonomy_level: [full_auto, semi_auto_with_hitl, advisor_only]
+  exposure_boundary: [external, internal, human_bounded]
+  authentication_scope: [user_delegated, agent_service_account, elevated]
+  access_scope: [all_users, role_restricted, owner_only, agent_scoped]
+  recipient_type: [named_user, broadcast, system, agent, public_channel]
+  scope: [session, user, agent, organization, global]

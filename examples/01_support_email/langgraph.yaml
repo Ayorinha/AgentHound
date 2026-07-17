@@ -1,0 +1,19 @@
+# Example 1 - Support email assistant (LangGraph). Same case.
+# Expected findings: FH-002 (reachable sensitive read) + FH-003 (external output from untrusted input).
+# The state graph connects an untrusted input with an agent that reads the CRM and replies by email.
+name: Support Email Assistant (risky)
+state_graph:
+  entry_point: support_agent
+  nodes:
+    - name: Inbound customer email
+      type: input
+      trust_level: untrusted
+    - name: support_agent
+      type: agent
+      trust_level: internal_logic
+      tools:
+        - name: CRM Customer Records read
+        - name: gmail_send
+  edges:
+    - {source: START, target: Inbound customer email}
+    - {source: Inbound customer email, target: support_agent}

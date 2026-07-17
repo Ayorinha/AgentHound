@@ -1,0 +1,21 @@
+# LangGraph safe StateGraph. A single supervised assistant reads a medium-
+# sensitivity knowledge base and replies internally; no code execution, no
+# delegation, no external send.
+name: Safe Agent Graph
+state_graph:
+  entry_point: assistant
+  nodes:
+    - name: user_message
+      type: input
+    - name: assistant
+      type: agent
+      autonomy_level: supervised
+      tools:
+        - name: docs.read
+    - name: reply
+      type: output
+      boundary: internal
+  edges:
+    - { source: START, target: user_message }
+    - { source: user_message, target: assistant }
+    - { source: assistant, target: reply }

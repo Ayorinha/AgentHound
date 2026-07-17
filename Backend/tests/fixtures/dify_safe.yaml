@@ -1,0 +1,31 @@
+# Dify safe workflow. The knowledge base is only medium sensitivity and there is
+# no external http-request node, so neither FH-002 nor FH-003 fires.
+app:
+  name: Safe Support Workflow
+  mode: workflow
+kind: app
+version: 0.1.5
+workflow:
+  features: {}
+  graph:
+    nodes:
+      - id: start
+        data:
+          type: start
+          title: User Message
+      - id: llm
+        data:
+          type: llm
+          title: Support Agent
+      - id: knowledge
+        data:
+          type: knowledge-retrieval
+          title: Support FAQ
+      - id: answer
+        data:
+          type: answer
+          title: Final Answer
+    edges:
+      - { source: start, target: llm, data: {} }
+      - { source: llm, target: knowledge, data: {} }
+      - { source: llm, target: answer, data: {} }

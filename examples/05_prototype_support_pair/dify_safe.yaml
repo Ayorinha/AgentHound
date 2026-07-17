@@ -1,0 +1,45 @@
+# Example 5 - Support triage, risky/safe pair (Dify, SAFE variant). Literal copy of the
+# original prototype fixture; loads without changes.
+# The "after": without the external http-request node there is no reachable external output (no FH-003),
+# and the queried knowledge is medium-sensitivity (no FH-002). Only hygiene findings remain.
+app:
+  name: "Safe Support Workflow"
+  mode: workflow
+kind: app
+version: 0.1.5
+workflow:
+  features: {}
+  graph:
+    nodes:
+      - id: start
+        data:
+          type: start
+          title: Start
+      - id: llm
+        data:
+          type: llm
+          title: Support Agent
+      - id: knowledge
+        data:
+          type: knowledge-retrieval
+          title: Support Knowledge
+      - id: answer
+        data:
+          type: answer
+          title: Final Answer
+    edges:
+      - source: start
+        target: llm
+        data:
+          sourceType: start
+          targetType: llm
+      - source: llm
+        target: knowledge
+        data:
+          sourceType: llm
+          targetType: knowledge-retrieval
+      - source: llm
+        target: answer
+        data:
+          sourceType: llm
+          targetType: answer

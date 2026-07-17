@@ -1,0 +1,524 @@
+# Control catalog (spec section 11) - Phase 2.
+#
+# Controls are first-class mitigations. Each declares the capability kinds it
+# breaks or mitigates and an effect:
+#   - effect: total   -> an affected edge is marked `blocked` and cut from the
+#                        recomputed graph, so any attack path through it disappears.
+#   - effect: partial -> an affected edge is marked `mitigated`; the hop is NOT
+#                        cut, but every surviving finding whose path crosses it
+#                        loses MITIGATION_CREDIT from its score. Only `blocked`
+#                        (total-effect) edges are excluded from attack-path
+#                        traversal.
+#
+# `cost` and `demo_priority` are presentation hints surfaced by the control
+# recommender (spec section 12.5). `status` is runtime state (absent until a
+# control is applied in a simulation) and is therefore NOT stored here.
+#
+# Capability kinds must be verbs from capabilities.yaml (spec section 3). The
+# richer FH-010/011/014 controls are catalogued now for completeness even though
+# those rules land in Phase 3.
+controls:
+  - id: humanInTheLoop
+    name: Human approval
+    category: decision
+    breaks_capability_kinds:
+      - send
+      - executeCode
+      - createResource
+      - modifyResource
+      - deleteResource
+      - invokeTool
+    effect: total
+    cost: low
+    demo_priority: must_show
+
+  - id: leastPrivilege
+    name: Least privilege
+    category: access
+    breaks_capability_kinds:
+      - read
+      - invokeTool
+    effect: partial
+    cost: medium
+    demo_priority: should_show
+
+  - id: accessScopeRestriction
+    name: Access scope restriction
+    category: access
+    breaks_capability_kinds:
+      - read
+    effect: partial
+    cost: medium
+    demo_priority: should_show
+
+  - id: dataClassification
+    name: Data classification
+    category: governance
+    breaks_capability_kinds:
+      - read
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: inputSanitization
+    name: Input sanitization
+    category: validation
+    breaks_capability_kinds:
+      - receiveInstruction
+    effect: partial
+    cost: low
+    demo_priority: should_show
+
+  - id: outputFiltering
+    name: Output filtering
+    category: validation
+    breaks_capability_kinds:
+      - send
+    effect: partial
+    cost: low
+    demo_priority: should_show
+
+  - id: piiRedaction
+    name: PII redaction
+    category: validation
+    breaks_capability_kinds:
+      - send
+    effect: partial
+    cost: medium
+    demo_priority: should_show
+
+  - id: domainAllowlist
+    name: Domain allowlist
+    category: access
+    breaks_capability_kinds:
+      - send
+      - fetchWeb
+    effect: partial
+    cost: low
+    demo_priority: should_show
+
+  - id: contentValidation
+    name: Content validation
+    category: validation
+    breaks_capability_kinds:
+      - fetchWeb
+    effect: total
+    cost: low
+    demo_priority: must_show
+
+  - id: urlAllowlist
+    name: URL allowlist
+    category: access
+    breaks_capability_kinds:
+      - fetchWeb
+    effect: partial
+    cost: low
+    demo_priority: should_show
+
+  - id: delegationScoping
+    name: Delegation scoping
+    category: access
+    breaks_capability_kinds:
+      - delegateTo
+    effect: total
+    cost: medium
+    demo_priority: should_show
+
+  # --- Phase 3 rule controls (FH-010/011/014), catalogued for completeness ---
+  - id: sandboxIsolation
+    name: Sandbox isolation
+    category: isolation
+    breaks_capability_kinds:
+      - executeCode
+    effect: total
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: commandAllowlist
+    name: Command allowlist
+    category: access
+    breaks_capability_kinds:
+      - executeCode
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: dryRunFirst
+    name: Dry run first
+    category: decision
+    breaks_capability_kinds:
+      - modifyResource
+      - deleteResource
+      - executeCode
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: rollbackReady
+    name: Rollback ready
+    category: recovery
+    breaks_capability_kinds:
+      - modifyResource
+      - deleteResource
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: softDeleteFallback
+    name: Soft delete fallback
+    category: recovery
+    breaks_capability_kinds:
+      - deleteResource
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: interAgentAuthentication
+    name: Inter-agent authentication
+    category: access
+    breaks_capability_kinds:
+      - delegateTo
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: credentialScoping
+    name: Credential scoping
+    category: access
+    breaks_capability_kinds:
+      - delegateTo
+      - invokeTool
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  # ── Input controls ─────────────────────────────────────────────────────────
+
+  - id: promptShielding
+    name: Prompt shielding
+    category: input
+    breaks_capability_kinds:
+      - receiveInstruction
+    effect: detector
+    cost: medium
+    demo_priority: should_show
+
+  - id: sourceAuthentication
+    name: Source authentication
+    category: input
+    breaks_capability_kinds:
+      - receiveEvent
+      - receiveInstruction
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: eventReplayProtection
+    name: Event replay protection
+    category: input
+    breaks_capability_kinds:
+      - receiveEvent
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: rateLimiting
+    name: Rate limiting
+    category: input
+    breaks_capability_kinds:
+      - receiveInstruction
+      - invokeTool
+      - notify
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  # ── Additional access controls ─────────────────────────────────────────────
+
+  - id: secretsVault
+    name: Secrets vault
+    category: access
+    breaks_capability_kinds:
+      - authenticate
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: tokenRotation
+    name: Token rotation
+    category: access
+    breaks_capability_kinds: []
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  # ── Additional decision controls ───────────────────────────────────────────
+
+  - id: explainability
+    name: Explainability
+    category: decision
+    breaks_capability_kinds: []
+    effect: detector
+    cost: low
+    demo_priority: should_show
+
+  - id: confidenceGating
+    name: Confidence gating
+    category: decision
+    breaks_capability_kinds:
+      - classify
+    effect: total
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: askForConfirmation
+    name: Ask for confirmation
+    category: decision
+    breaks_capability_kinds:
+      - interpretIntent
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: humanReviewOfPlan
+    name: Human review of plan
+    category: decision
+    breaks_capability_kinds: []
+    effect: total
+    cost: medium
+    demo_priority: should_show
+
+  # ── Execution controls ─────────────────────────────────────────────────────
+
+  - id: idempotencyKey
+    name: Idempotency key
+    category: execution
+    breaks_capability_kinds: []
+    effect: total
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: resourceQuota
+    name: Resource quota
+    category: execution
+    breaks_capability_kinds:
+      - executeCode
+      - createResource
+    effect: partial
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: circuitBreaker
+    name: Circuit breaker
+    category: execution
+    breaks_capability_kinds:
+      - invokeTool
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  # ── Additional output controls ─────────────────────────────────────────────
+
+  - id: encryptionEnforcement
+    name: Encryption enforcement
+    category: output
+    breaks_capability_kinds: []
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: contentPolicyCheck
+    name: Content policy check
+    category: output
+    breaks_capability_kinds:
+      - generateContent
+      - respondUser
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  # ── Multi-agent controls ───────────────────────────────────────────────────
+
+  - id: contextIsolation
+    name: Context isolation
+    category: multi_agent
+    breaks_capability_kinds:
+      - delegateTo
+    effect: total
+    cost: medium
+    demo_priority: should_show
+
+  # ── Memory controls ────────────────────────────────────────────────────────
+
+  - id: memoryValidation
+    name: Memory validation
+    category: memory
+    breaks_capability_kinds:
+      - writeMemory
+    effect: partial
+    cost: medium
+    demo_priority: must_show
+
+  - id: memoryScoping
+    name: Memory scoping
+    category: memory
+    breaks_capability_kinds:
+      - readMemory
+    effect: total
+    cost: low
+    demo_priority: should_show
+
+  - id: memoryProvenanceCheck
+    name: Memory provenance check
+    category: memory
+    breaks_capability_kinds:
+      - readMemory
+    effect: detector
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: retentionTTL
+    name: Retention TTL
+    category: memory
+    breaks_capability_kinds:
+      - readMemory
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: memoryQuota
+    name: Memory quota
+    category: memory
+    breaks_capability_kinds:
+      - writeMemory
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: automaticForgetPolicy
+    name: Automatic forget policy
+    category: memory
+    breaks_capability_kinds: []
+    effect: total
+    cost: medium
+    demo_priority: nice_to_have
+
+  # ── Monitoring controls ────────────────────────────────────────────────────
+
+  - id: auditLogging
+    name: Audit logging
+    category: monitoring
+    breaks_capability_kinds: []
+    effect: detector
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: immutableLogs
+    name: Immutable logs
+    category: monitoring
+    breaks_capability_kinds: []
+    effect: total
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: logPiiMasking
+    name: Log PII masking
+    category: monitoring
+    breaks_capability_kinds:
+      - auditLog
+    effect: partial
+    cost: low
+    demo_priority: nice_to_have
+
+  - id: postConditionCheck
+    name: Post-condition check
+    category: monitoring
+    breaks_capability_kinds: []
+    effect: detector
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: endToEndValidation
+    name: End-to-end validation
+    category: monitoring
+    breaks_capability_kinds: []
+    effect: detector
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: changeWindowPolicy
+    name: Change window policy
+    category: monitoring
+    breaks_capability_kinds:
+      - deployRelease
+    effect: total
+    cost: low
+    demo_priority: nice_to_have
+
+  # ── Detection controls ─────────────────────────────────────────────────────
+
+  - id: promptInjectionDetector
+    name: Prompt injection detector
+    category: detection
+    breaks_capability_kinds:
+      - receiveInstruction
+      - fetchWeb
+    effect: detector
+    cost: medium
+    demo_priority: must_show
+
+  - id: dlpScanner
+    name: DLP scanner
+    category: detection
+    breaks_capability_kinds:
+      - send
+      - respondUser
+    effect: detector
+    cost: medium
+    demo_priority: should_show
+
+  - id: commandRiskScorer
+    name: Command risk scorer
+    category: detection
+    breaks_capability_kinds:
+      - executeCode
+    effect: detector
+    cost: medium
+    demo_priority: nice_to_have
+
+  - id: anomalyDetection
+    name: Anomaly detection
+    category: detection
+    breaks_capability_kinds: []
+    effect: detector
+    cost: high
+    demo_priority: nice_to_have
+
+  # ── Compliance controls ────────────────────────────────────────────────────
+
+  - id: regulatoryComplianceCheck
+    name: Regulatory compliance check
+    category: compliance
+    breaks_capability_kinds: []
+    effect: total
+    cost: high
+    demo_priority: nice_to_have
+
+  - id: consentEnforcement
+    name: Consent enforcement
+    category: compliance
+    breaks_capability_kinds:
+      - read
+      - writeMemory
+      - send
+    effect: total
+    cost: high
+    demo_priority: nice_to_have
+
+  - id: decisionAuditTrail
+    name: Decision audit trail
+    category: compliance
+    breaks_capability_kinds: []
+    effect: detector
+    cost: medium
+    demo_priority: nice_to_have

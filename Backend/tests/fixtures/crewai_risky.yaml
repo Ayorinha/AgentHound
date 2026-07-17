@@ -1,0 +1,41 @@
+# CrewAI risky crew (single-file agents + tasks form). Expected findings:
+#   FH-002  sensitive read (ATS/CV) reachable from the untrusted intake
+#   FH-003  actionable external send via gmail.send with no approval gate
+#   FH-014  unscoped delegation from a full-auto, untrusted intake to a
+#           trusted-core screener
+name: Risky Hiring Crew
+agents:
+  application_intake:
+    role: Application Intake
+    goal: Intake inbound candidate applications
+    trust_level: untrusted
+    inputs:
+      - name: Public Web Form
+        trust_level: untrusted
+    delegates_to:
+      - candidate_screener
+  candidate_screener:
+    role: Candidate Screener
+    goal: Screen candidates against the role
+    trust_level: trusted_core
+    delegates_to:
+      - candidate_communicator
+    tools:
+      - name: ats.query
+        reads_asset:
+          name: ATS Database
+          sensitivity: high
+      - name: pdf.parse
+        reads_asset:
+          name: CV Attachments
+          sensitivity: high
+  candidate_communicator:
+    role: Candidate Communicator
+    goal: Reply to candidates
+    tools:
+      - name: gmail.send
+tasks:
+  intake_task:
+    description: Read the inbound application email and attachments
+    expected_output: A structured candidate record
+    agent: application_intake

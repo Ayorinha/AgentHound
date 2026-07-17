@@ -1,0 +1,31 @@
+# Example 3 - Operations assistant with destructive actions (CrewAI). 2 agents.
+# Expected findings: FH-011 (destructive modification/deletion from untrusted input) + FH-002.
+name: IT Ops Assistant (risky)
+agents:
+  ticket_intake:
+    role: Ticket Intake
+    goal: Receive maintenance tickets from the shared inbox
+    trust_level: untrusted
+    inputs:
+      - name: Inbound maintenance ticket email
+        trust_level: untrusted
+    delegates_to:
+      - ops_executor
+  ops_executor:
+    role: Operations Executor
+    goal: Apply the requested maintenance action
+    trust_level: internal_logic
+    tools:
+      - name: customer_records_delete
+        requires_approval: false
+        side_effect_reversible: false
+        reads_asset:
+          name: Customer Records Database
+          sensitivity: high
+      - name: crm_records_update
+        requires_approval: false
+tasks:
+  apply_maintenance:
+    description: Read the ticket request and apply the maintenance action
+    expected_output: A maintenance report
+    agent: ticket_intake

@@ -1,0 +1,22 @@
+# Example 1 - Support email assistant (Dify). Same case.
+# Expected findings: FH-002 + FH-003.
+app:
+  name: Support Email Assistant (risky)
+workflow:
+  graph:
+    nodes:
+      - id: n_start
+        data: {type: start, title: Inbound customer email}
+      - id: n_llm
+        data: {type: llm, title: Support Agent}
+      - id: n_crm
+        data: {type: tool, title: CRM Customer Records read}
+      - id: n_send
+        data: {type: tool, title: Gmail Send reply}
+      - id: n_answer
+        data: {type: answer, title: Email reply}
+    edges:
+      - {source: n_start, target: n_llm}
+      - {source: n_llm, target: n_crm}
+      - {source: n_llm, target: n_send}
+      - {source: n_send, target: n_answer}

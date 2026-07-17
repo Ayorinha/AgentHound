@@ -1,0 +1,602 @@
+"use client";
+import "@xyflow/react/dist/style.css";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  ControlButton,
+  Controls,
+  Panel,
+  ReactFlow,
+  ReactFlowProvider,
+  getNodesBounds,
+  getViewportForBounds,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
+} from "@xyflow/react";
+import { toPng } from "html-to-image";
+import { applyAlpha } from "@telefonica/mistica";
+import type { Attack, ControlInfo, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
+import { cyber, getSeverityPath, NODE_STYLE, useIsDarkMode, type PathSeverity } from "@/components/threat-model/graph/cyberGraphTheme";
+import { GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
+import { edgeTypes, SeverityPathContext } from "@/components/threat-model/graph/edgeTypes";
+import { buildGraph, type CyberNode } from "@/components/threat-model/graph/toReactFlow";
+import { elkLayout } from "@/components/threat-model/graph/elkLayout";
+
+export interface CyberGraphProps {
+  solved: boolean;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  attacks: Attack[];
+  /** Analysis name, shown only in fullscreen: the page heading that normally
+   * identifies the test is not visible once the canvas takes over the screen. */
+  name?: string;
+  /** Controls (with effect) per node id — surfaced in the node padlock tooltip. */
+  nodeControls: Record<string, ControlInfo[]>;
+  /** Controls (with effect) per edge id — surfaced in the path padlock tooltip. */
+  edgeControls: Record<string, ControlInfo[]>;
+  onNodeClick: (node: GraphNode) => void;
+  labels: {
+    playAttack: string;
+    stop: string;
+    fit: string;
+    fullscreen: string;
+    exitFullscreen: string;
+    download: string;
+    legendSafe: string;
+    legendBlocked: string;
+    legendMitigated: string;
+    legendPathSeverity: string;
+    legendPrimaryRoute: string;
+    legendHigh: string;
+    legendMedium: string;
+    legendLow: string;
+    legendInfo: string;
+    legendNodeTypes: string;
+    nodeTypeLabel: Record<Exclude<NodeType, "control">, string>;
+    recommendedControls: string;
+    /** Per-effect tag shown next to each control in the padlock tooltip. */
+    controlEffect: { total: string; partial: string };
+  };
+}
+
+const CANVAS_H = 540;
+
+// Safari still exposes the Fullscreen API under the webkit prefix, so fall back to
+// the prefixed members when the standard ones are absent.
+type FsDocument = Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void };
+type FsElement = HTMLElement & { webkitRequestFullscreen?: () => void };
+
+function fullscreenElement(): Element | null {
+  const d = document as FsDocument;
+  return d.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+}
+function requestFullscreen(el: FsElement) {
+  void (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el);
+}
+function exitFullscreen() {
+  const d = document as FsDocument;
+  void (d.exitFullscreen ?? d.webkitExitFullscreen)?.call(d);
+}
+
+function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls, onNodeClick, labels }: CyberGraphProps) {
+  const isDark = useIsDarkMode();
+  const severityPath = useMemo(() => getSeverityPath(isDark), [isDark]);
+  const built = useMemo(
+    () => buildGraph(nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect),
+    [nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect],
+  );
+
+  // Node types actually present in the graph, in reading order, for the legend.
+  const presentTypes = useMemo(() => {
+    const seen = new Set(nodes.map((n) => n.type));
+    return NODE_TYPE_ORDER.filter((t) => seen.has(t));
+  }, [nodes]);
+
+  // Edge variants/severities actually present in the built graph, so the
+  // path-severity legend only lists rows that appear on the canvas.
+  const legendState = useMemo(() => {
+    const severities = new Set<PathSeverity>();
+    let hasPrimaryRoute = false;
+    let hasBlocked = false;
+    let hasMitigated = false;
+    let hasSafe = false;
+    built.edges.forEach((e) => {
+      const variant = e.data?.variant;
+      if (variant === "danger") hasPrimaryRoute = true;
+      else if (variant === "finding" && e.data?.severity) severities.add(e.data.severity);
+      else if (variant === "blocked") hasBlocked = true;
+      else if (variant === "mitigated") hasMitigated = true;
+      // "neutralized" (safe by an upstream cut) and "neutral" both read as safe.
+      else if (variant === "neutralized" || variant === "neutral") hasSafe = true;
+    });
+    return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe };
+  }, [built.edges]);
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(built.nodes);
+  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(built.edges);
+  const [playStep, setPlayStep] = useState<number | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { getNodes, fitView } = useReactFlow();
+
+  // Native Fullscreen API on the canvas wrapper — this covers the whole
+  // screen (including the app sidebar), unlike a CSS-only overlay.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(fullscreenElement() === canvasRef.current);
+    const target: EventTarget = document;
+    target.addEventListener("fullscreenchange", onChange);
+    target.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      target.removeEventListener("fullscreenchange", onChange);
+      target.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    if (fullscreenElement()) {
+      exitFullscreen();
+    } else if (canvasRef.current) {
+      requestFullscreen(canvasRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }));
+    return () => cancelAnimationFrame(raf);
+  }, [isFullscreen, fitView]);
+
+  // Reset the canvas whenever the source graph changes (e.g. Findings ↔ Solution).
+  // Done during render via the "adjust state on prop change" pattern rather than
+  // an effect, so there is no extra cascading commit.
+  const [prevBuilt, setPrevBuilt] = useState(built);
+  if (prevBuilt !== built) {
+    setPrevBuilt(built);
+    setRfNodes(built.nodes);
+    setRfEdges(built.edges);
+    setPlayStep(null);
+  }
+
+  const stop = useCallback(() => {
+    if (timer.current) clearInterval(timer.current);
+    timer.current = null;
+    setPlayStep(null);
+  }, []);
+
+  useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
+
+  // Refine node positions with an ELK `layered` layout (React Flow's official
+  // elkjs approach): ELK reorders nodes within their type-column to minimise edge
+  // crossings; we keep the curved edges. The swimlane positions from buildGraph
+  // act as the synchronous fallback until ELK resolves.
+  useEffect(() => {
+    let cancelled = false;
+    const real = nodes.filter((n) => n.type !== "control");
+    if (real.length === 0) return;
+    void elkLayout(real, edges).then((pos) => {
+      if (cancelled || pos.size === 0) return;
+      setRfNodes((prev) =>
+        prev
+          .filter((n): n is CyberNode => n.type === "cyber")
+          .map((n) => (pos.has(n.id) ? { ...n, position: pos.get(n.id)! } : n)),
+      );
+      window.requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }));
+    });
+    return () => { cancelled = true; };
+  }, [nodes, edges, setRfNodes, fitView]);
+
+  const play = useCallback(() => {
+    if (built.attackNodeIds.length === 0) return;
+    if (timer.current) clearInterval(timer.current);
+    setPlayStep(0);
+    let i = 0;
+    timer.current = setInterval(() => {
+      i += 1;
+      if (i >= built.attackNodeIds.length) {
+        if (timer.current) clearInterval(timer.current);
+        timer.current = null;
+        window.setTimeout(() => setPlayStep(null), 1600);
+        return;
+      }
+      setPlayStep(i);
+    }, 760);
+  }, [built.attackNodeIds]);
+
+  const isPlaying = playStep !== null;
+
+  // Overlay animation classes without disturbing the (draggable) base positions.
+  const renderNodes = useMemo(() => {
+    if (!isPlaying) return rfNodes;
+    const step = playStep ?? 0;
+    const live = new Set(built.attackNodeIds.slice(0, step + 1));
+    const current = built.attackNodeIds[step];
+    return rfNodes.map((n) => {
+      const onPath = built.attackNodeIds.includes(n.id);
+      const className = n.id === current ? "ch-current" : live.has(n.id) ? "ch-live" : onPath ? "" : "ch-dim";
+      return { ...n, className };
+    });
+  }, [isPlaying, playStep, rfNodes, built.attackNodeIds]);
+
+  const renderEdges = useMemo(() => {
+    if (!isPlaying) return rfEdges;
+    const step = playStep ?? 0;
+    const live = new Set(built.attackEdgeIds.slice(0, step));
+    const current = built.attackEdgeIds[step - 1];
+    return rfEdges.map((e) => {
+      const className = e.id === current ? "ch-edge-current" : live.has(e.id) ? "ch-edge-live" : "ch-dim";
+      return { ...e, className };
+    });
+  }, [isPlaying, playStep, rfEdges, built.attackEdgeIds]);
+
+  const download = useCallback(() => {
+    // Scope the DOM lookups to this graph's own wrapper so a second graph elsewhere
+    // on the page can never be exported by mistake.
+    const canvas = canvasRef.current;
+    const viewport = canvas?.querySelector<HTMLElement>(".react-flow__viewport");
+    if (!canvas || !viewport) return;
+    const bounds = getNodesBounds(getNodes());
+    const w = 1800;
+    const h = 1000;
+    const vp = getViewportForBounds(bounds, w, h, 0.4, 2.5, 0.12);
+    // `cyber.bg` is a `var(--colorBackground)` reference — html-to-image needs a
+    // resolved literal for its rasterised backgroundColor, so read the canvas
+    // wrapper's actual computed (theme-resolved) background instead.
+    const resolvedBg = getComputedStyle(canvas).backgroundColor;
+    void toPng(viewport, {
+      backgroundColor: resolvedBg,
+      width: w,
+      height: h,
+      style: { width: `${w}px`, height: `${h}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
+    }).then((dataUrl) => {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = "agenthound-capability-graph.png";
+      a.click();
+    });
+  }, [getNodes]);
+
+  const canPlay = !solved && built.attackNodeIds.length > 0;
+
+  return (
+    <div
+      ref={canvasRef}
+      data-ch-canvas
+      style={{
+        height: isFullscreen ? "100vh" : CANVAS_H,
+        width: "100%",
+        background: cyber.bg,
+        borderRadius: isFullscreen ? 0 : 16,
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      <style>{CYBER_CSS}</style>
+      <SeverityPathContext.Provider value={severityPath}>
+      <ReactFlow
+        nodes={renderNodes}
+        edges={renderEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={(_, node) => {
+          const data = (node as CyberNode).data;
+          if (data?.gnode) onNodeClick(data.gnode);
+        }}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.08 }}
+        minZoom={0.25}
+        maxZoom={2.5}
+        nodesConnectable={false}
+        elementsSelectable
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={26} size={1.4} color={cyber.grid} />
+        <Controls showInteractive={false} showFitView={false} className="ch-controls">
+          <ControlButton onClick={toggleFullscreen} title={isFullscreen ? labels.exitFullscreen : labels.fullscreen}>
+            {isFullscreen ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 3v4a2 2 0 0 1-2 2H3M15 3v4a2 2 0 0 0 2 2h4M9 21v-4a2 2 0 0 0-2-2H3M15 21v-4a2 2 0 0 1 2-2h4" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9V5a2 2 0 0 1 2-2h4M21 9V5a2 2 0 0 0-2-2h-4M3 15v4a2 2 0 0 0 2 2h4M21 15v4a2 2 0 0 1-2 2h-4" />
+              </svg>
+            )}
+          </ControlButton>
+        </Controls>
+
+        {isFullscreen && name && (
+          <Panel position="top-center">
+            <div style={fullscreenTitleBox} title={name}>
+              {name}
+            </div>
+          </Panel>
+        )}
+
+        <Panel position="top-right">
+          <div style={{ display: "flex", gap: 8 }}>
+            {canPlay && (
+              isPlaying ? (
+                <ToolbarButton onClick={stop} label={labels.stop} accent={cyber.danger} glyph="◼" />
+              ) : (
+                <ToolbarButton onClick={play} label={labels.playAttack} accent={cyber.danger} glyph="▶" />
+              )
+            )}
+            <ToolbarButton onClick={() => fitView({ padding: 0.08, duration: 400 })} label={labels.fit} glyph="⤢" />
+            <ToolbarButton onClick={download} label={labels.download} glyph="↓" />
+          </div>
+        </Panel>
+
+        <Panel position="top-left">
+          <div style={legendBox}>
+            {solved ? (
+              <>
+                {legendState.hasBlocked && <LegendRow color={cyber.protected} text={labels.legendBlocked} dashed icon="lock" />}
+                {legendState.hasMitigated && <LegendRow color={cyber.mitigated} text={labels.legendMitigated} icon="shield" />}
+                {legendState.hasSafe && <LegendRow color={cyber.neutral} text={labels.legendSafe} />}
+              </>
+            ) : (
+              <>
+                {(legendState.hasPrimaryRoute || legendState.severities.size > 0 || legendState.hasSafe) && (
+                  <div style={legendHeading}>{labels.legendPathSeverity}</div>
+                )}
+                {legendState.hasPrimaryRoute && (
+                  <LegendRow color={severityPath.critical.color} glowColor={severityPath.critical.glow} text={labels.legendPrimaryRoute} dashed glow />
+                )}
+                {legendState.severities.has("high") && <LegendRow color={severityPath.high.color} text={labels.legendHigh} />}
+                {legendState.severities.has("medium") && <LegendRow color={severityPath.medium.color} text={labels.legendMedium} />}
+                {legendState.severities.has("low") && <LegendRow color={severityPath.low.color} text={labels.legendLow} />}
+                {legendState.severities.has("info") && <LegendRow color={severityPath.info.color} text={labels.legendInfo} />}
+                {legendState.hasSafe && <LegendRow color={cyber.neutral} text={labels.legendSafe} />}
+              </>
+            )}
+            {presentTypes.length > 0 && (
+              <>
+                <div style={legendDivider} />
+                <div style={legendHeading}>{labels.legendNodeTypes}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: 208 }}>
+                  {presentTypes.map((t) => (
+                    <NodeTypeChip key={t} type={t} label={labels.nodeTypeLabel[t]} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </Panel>
+      </ReactFlow>
+      </SeverityPathContext.Provider>
+    </div>
+  );
+}
+
+function ToolbarButton({ onClick, label, glyph, accent }: { onClick: () => void; label: string; glyph: string; accent?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        height: 30,
+        padding: "0 12px",
+        borderRadius: 8,
+        border: `1px solid ${accent ?? cyber.laneBorder}`,
+        background: accent ? cyber.dangerSoft : cyber.faintOverlay,
+        color: accent ?? cyber.textPrimary,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <span style={{ fontSize: 11 }}>{glyph}</span>
+      {label}
+    </button>
+  );
+}
+
+const legendBox: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+  padding: "10px 12px",
+  borderRadius: 10,
+  background: cyber.bgPanel,
+  border: `1px solid ${cyber.laneBorder}`,
+  backdropFilter: "blur(6px)",
+};
+
+const fullscreenTitleBox: React.CSSProperties = {
+  padding: "10px 18px",
+  borderRadius: 10,
+  background: cyber.bgPanel,
+  border: `1px solid ${cyber.laneBorder}`,
+  backdropFilter: "blur(6px)",
+  fontSize: 20,
+  fontWeight: 600,
+  color: cyber.textPrimary,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  maxWidth: "40vw",
+};
+
+const legendHeading: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 0.6,
+  textTransform: "uppercase",
+  color: cyber.textMuted,
+  marginBottom: 2,
+};
+
+const legendDivider: React.CSSProperties = {
+  height: 1,
+  background: cyber.laneBorder,
+  margin: "3px 0 1px",
+};
+
+// Reading order for the node-type legend (control folds into edges, so it is
+// excluded — matching how the graph itself omits control nodes).
+const NODE_TYPE_ORDER: Exclude<NodeType, "control">[] = ["input", "agent", "memory", "tool", "data", "output"];
+
+function NodeTypeChip({ type, label }: { type: Exclude<NodeType, "control">; label: string }) {
+  const { accent, accentRaw } = NODE_STYLE[type];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "2px 7px 2px 4px",
+        borderRadius: 999,
+        border: `1px solid ${applyAlpha(accentRaw, 0.33)}`,
+        background: cyber.faintOverlay,
+        fontSize: 10.5,
+        color: cyber.textSecondary,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ display: "grid", placeItems: "center", width: 16, height: 16 }}>{GLYPH[type](accent, 14)}</span>
+      {label}
+    </span>
+  );
+}
+
+function LegendIcon({ kind, color }: { kind: "lock" | "shield"; color: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "inline-grid",
+        placeItems: "center",
+        width: 16,
+        height: 16,
+        borderRadius: "50%",
+        background: cyber.bg,
+        boxShadow: `0 0 0 1px ${color}`,
+      }}
+    >
+      {kind === "lock" ? (
+        <svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+          <rect x="5" y="11" width="14" height="9" rx="2" fill={color} />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke={color} strokeWidth={1.6} fill="none" />
+        </svg>
+      ) : (
+        <svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+          <path d="M12 3.5l6.5 2.6v4.4c0 3.9-2.7 6.5-6.5 7.6-3.8-1.1-6.5-3.7-6.5-7.6V6.1z" fill={color} />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function LegendRow({ color, text, icon, cut, dashed, glow, glowColor }: { color: string; text: string; icon?: "lock" | "shield"; cut?: boolean; dashed?: boolean; glow?: boolean; glowColor?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: cyber.textSecondary }}>
+      <span
+        style={
+          dashed
+            ? { width: 18, height: 0, borderTop: `2px dashed ${color}`, filter: `drop-shadow(0 0 5px ${color})`, boxShadow: glow ? `0 0 0 2px ${glowColor ?? color}` : undefined }
+            : { width: 18, height: 3, borderRadius: 2, background: color, boxShadow: `0 0 8px ${color}` }
+        }
+      />
+      {icon && <LegendIcon kind={icon} color={color} />}
+      {cut && <span aria-hidden style={{ fontSize: 12, color, fontWeight: 700 }}>✕</span>}
+      {text}
+    </div>
+  );
+}
+
+const CYBER_CSS = `
+.ch-node { transition: box-shadow .2s ease, transform .2s ease, opacity .3s ease; }
+.react-flow__edge.ch-edge-flow path.react-flow__edge-path,
+.react-flow__edge-path.ch-edge-flow { animation: chDash .6s linear infinite; }
+@keyframes chDash { to { stroke-dashoffset: -28; } }
+.react-flow__node.ch-dim, .react-flow__edge.ch-dim { opacity: .22; }
+.react-flow__node.ch-current .ch-node { transform: scale(1.09); box-shadow: 0 0 0 2px ${cyber.danger}, 0 0 34px 7px ${cyber.dangerGlow} !important; }
+.react-flow__node.ch-live .ch-node { box-shadow: 0 0 0 1.5px ${cyber.danger}, 0 0 20px 2px ${cyber.dangerGlow} !important; }
+.react-flow__edge.ch-edge-current path.react-flow__edge-path { stroke-width: 3.4 !important; filter: drop-shadow(0 0 6px ${cyber.danger}); }
+.react-flow__edge.ch-edge-live path.react-flow__edge-path { stroke-width: 2.8 !important; }
+.ch-controls button { background: ${cyber.surface}; border-bottom: 1px solid ${cyber.laneBorder}; color: ${cyber.textPrimary}; }
+.ch-controls button:hover { background: ${cyber.surfaceHover}; }
+.ch-controls button svg { fill: ${cyber.textPrimary}; }
+
+/* ---- agent "reactor core" hero node -------------------------------------- */
+@property --ch-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.ch-reactor:hover { transform: translateY(-1px); }
+/* breathing outer halo (box-shadow spreads beyond the card) */
+.ch-reactor-halo {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  animation: chReactorHalo 2.6s ease-in-out infinite;
+}
+@keyframes chReactorHalo {
+  0%, 100% { box-shadow: 0 0 16px 1px var(--ch-glow); }
+  50%      { box-shadow: 0 0 32px 7px var(--ch-glow); }
+}
+/* rotating conic-gradient border, masked to a 2px frame */
+.ch-reactor-ring {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0; padding: 2px;
+  background: conic-gradient(from var(--ch-angle),
+    transparent 0deg, var(--ch-accent) 70deg, #ffffff 118deg,
+    var(--ch-accent) 166deg, transparent 250deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+  animation: chReactorSpin 4.2s linear infinite;
+}
+@keyframes chReactorSpin { to { --ch-angle: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  .ch-reactor-ring, .ch-reactor-halo { animation: none; }
+}
+
+/* ---- padlock tooltip (recommended controls) ------------------------------ */
+/* raise the hovered node/label so its tooltip is not covered by later ones */
+.react-flow__node:hover { z-index: 50 !important; }
+.ch-lock { position: absolute; top: -12px; right: -12px; z-index: 4; }
+.ch-lock-tip {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 5;
+  min-width: 168px; max-width: 240px; width: max-content;
+  padding: 9px 11px; border-radius: 9px;
+  background: ${cyber.tooltipBg}; border: 1px solid ${cyber.protectedBorder};
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 12px ${cyber.protectedGlow};
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.ch-lock:hover .ch-lock-tip { opacity: 1; transform: translateY(0); }
+.ch-elabel:hover { z-index: 60 !important; }
+.ch-elock { position: relative; pointer-events: auto; }
+.ch-elock[role="button"] { cursor: pointer; }
+.ch-elock:hover .ch-lock-tip { opacity: 1; transform: translateY(0); }
+.ch-elock .ch-lock-tip { right: 50%; transform: translate(50%, -4px); }
+.ch-elock:hover .ch-lock-tip { transform: translate(50%, 0); }
+.ch-lock-tip-head {
+  display: block;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: ${cyber.protected}; margin-bottom: 6px;
+}
+.ch-lock-tip-item {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11.5px; line-height: 1.35; color: ${cyber.textSecondary};
+}
+.ch-lock-tip-item + .ch-lock-tip-item { margin-top: 4px; }
+.ch-lock-tip-item::before { content: "✓"; color: ${cyber.protected}; font-weight: 700; }
+.ch-lock-tip-tag {
+  margin-left: auto; padding: 0 5px; border: 1px solid; border-radius: 999px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  white-space: nowrap; align-self: center;
+}
+`;
+
+export default function CyberGraph(props: CyberGraphProps) {
+  return (
+    <ReactFlowProvider>
+      <Flow {...props} />
+    </ReactFlowProvider>
+  );
+}

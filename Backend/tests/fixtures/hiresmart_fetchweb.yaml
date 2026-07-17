@@ -1,0 +1,56 @@
+# Indirect-injection fixture (spec rule FH-006).
+# Untrusted input -> agent fetches external web content -> propagates to a
+# second agent -> external email without approval. Must yield FH-006.
+metadata:
+  name: HireSmart Web Enrichment
+
+nodes:
+  - id: input_web_form
+    type: input
+    name: Public Web Form
+    properties:
+      trust_level: untrusted
+
+  - id: agent_intake
+    type: agent
+    name: Intake Agent
+    properties:
+      autonomy_level: full_auto
+
+  - id: asset_external_web
+    type: data_asset
+    name: LinkedIn Profile Page
+    properties:
+      boundary: external
+      sensitivity: low
+
+  - id: agent_enricher
+    type: agent
+    name: Profile Enricher
+    properties:
+      autonomy_level: full_auto
+
+  - id: output_email
+    type: output
+    name: Recruiter Email
+    properties:
+      boundary: external
+      approval_gate_present: false
+
+edges:
+  - id: edge_001
+    source: input_web_form
+    target: agent_intake
+    capability: receiveInstruction
+  - id: edge_002
+    source: agent_intake
+    target: asset_external_web
+    capability: fetchWeb
+  - id: edge_003
+    source: asset_external_web
+    target: agent_enricher
+    capability: dataFlow
+  - id: edge_004
+    source: agent_enricher
+    target: output_email
+    capability: send

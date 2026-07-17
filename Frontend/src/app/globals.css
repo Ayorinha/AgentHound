@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "OnAir";
+  font-style: normal;
+  font-weight: 300;
+  src: url("/fonts/OnAir-Light.woff2") format("woff2");
+}
+@font-face {
+  font-family: "OnAir";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/OnAir-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "OnAir";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/OnAir-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "OnAir";
+  font-style: normal;
+  font-weight: 900;
+  src: url("/fonts/OnAir-Black.woff2") format("woff2");
+}
+
+input,
+textarea,
+pre,
+code {
+  font: inherit;
+}
+
+/* Color and radius tokens come from the Mistica skin (see src/lib/cyberSkin.ts) and are
+   applied via skinVars — either inline styles or the body rule in MisticaI18nBridge.
+   Tailwind here is used only for layout/spacing utilities, not for theming. */
+
+/* Mística <Select> dropdowns, tooltips, and other floating UI render through a
+   Portal that mounts a body-child <div style="isolation: isolate"> with no z-index.
+   Our backdrop modals use z-50, so without this override the dropdown falls behind
+   the modal. Bumping the portal containers to z-60 keeps them above modals while
+   staying below toast/snackbar layers if any are added later. */
+body > div[style*="isolation: isolate"] {
+  z-index: 60;
+}

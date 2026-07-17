@@ -1,0 +1,68 @@
+# Example 4 - HireSmart FULL CHAIN (generic adapter, explicit nodes+edges).
+# The only way to express the sensitive asset "midway" and fire the full chain.
+# Expected findings: FH-001 (PII exfiltration), FH-006 (indirect injection via fetchWeb
+# with lateral propagation), FH-011 (calendar modification), plus FH-002/FH-003.
+metadata:
+  name: HireSmart Copilot (full chain)
+nodes:
+  - id: input_web_form
+    type: input
+    name: Public Web Form
+    properties: {trust_level: untrusted, source_type: web_form}
+  - id: agent_intake
+    type: agent
+    name: Application Intake
+    properties: {role_type: worker, autonomy_level: full_auto, guardrails: []}
+  - id: agent_screener
+    type: agent
+    name: Candidate Screener
+    properties: {role_type: worker, autonomy_level: full_auto}
+  - id: agent_researcher
+    type: agent
+    name: Background Researcher
+    properties: {role_type: worker, autonomy_level: full_auto}
+  - id: agent_scheduler
+    type: agent
+    name: Interview Scheduler
+    properties: {role_type: worker, autonomy_level: full_auto}
+  - id: agent_communicator
+    type: agent
+    name: Candidate Communicator
+    properties: {role_type: worker}
+  - id: asset_cv
+    type: data_asset
+    name: CV Attachments
+    properties: {sensitivity: high, boundary: internal, contains_pii: true, asset_kind: drive_folder}
+  - id: asset_web
+    type: data_asset
+    name: LinkedIn Web Content
+    properties: {sensitivity: low, boundary: external, contains_pii: false, asset_kind: web_content}
+  - id: tool_calendar
+    type: tool
+    name: Calendar Modify
+    properties:
+      capability_kinds: [modifyResource, invokeTool]
+      operation_kind: modify
+      side_effect: true
+      side_effect_reversible: false
+      requires_approval: false
+  - id: asset_calendar
+    type: data_asset
+    name: Interview Calendar
+    properties: {sensitivity: medium, boundary: internal, contains_pii: false, asset_kind: calendar}
+  - id: output_email
+    type: output
+    name: Candidate Email
+    properties: {boundary: external, approval_gate_present: false, output_kind: email}
+edges:
+  - {id: edge_001, source: input_web_form, target: agent_intake, capability: receiveInstruction}
+  - {id: edge_002, source: agent_intake, target: agent_screener, capability: delegateTo}
+  - {id: edge_003, source: agent_screener, target: asset_cv, capability: read}
+  - {id: edge_004, source: asset_cv, target: agent_communicator, capability: dataFlow}
+  - {id: edge_005, source: agent_intake, target: agent_researcher, capability: delegateTo}
+  - {id: edge_006, source: agent_researcher, target: asset_web, capability: fetchWeb}
+  - {id: edge_007, source: asset_web, target: agent_communicator, capability: dataFlow}
+  - {id: edge_008, source: agent_intake, target: agent_scheduler, capability: delegateTo}
+  - {id: edge_009, source: agent_scheduler, target: tool_calendar, capability: invokeTool}
+  - {id: edge_010, source: tool_calendar, target: asset_calendar, capability: modifyResource}
+  - {id: edge_011, source: agent_communicator, target: output_email, capability: send}

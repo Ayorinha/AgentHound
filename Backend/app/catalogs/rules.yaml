@@ -1,0 +1,589 @@
+# Rule catalog (spec sections 7 and 8) - Phase 1 subset.
+#
+# Each rule is a declarative descriptor consumed by core/rules/registry.py.
+# The detection logic itself lives in core/rules/{path_rules,node_rules}.py and
+# is keyed by `id`; this catalog supplies the presentation metadata, base
+# severity, recommended controls and standards mappings attached to findings.
+rules:
+  - id: FH-001
+    title: Full exfiltration path
+    kind: path
+    category: capability_path
+    base_severity: critical
+    derivation: >-
+      An untrusted input reaches an agent that reads high/critical sensitive
+      data and ends at an external output with no approval gate.
+    recommended_controls:
+      - humanInTheLoop
+      - leastPrivilege
+      - outputFiltering
+      - inputSanitization
+      - piiRedaction
+    owasp_agentic: [T6]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0054, AML.T0048]
+
+  - id: FH-002
+    title: Sensitive read reachable from untrusted input
+    kind: node
+    category: capability_path
+    base_severity: high
+    derivation: >-
+      An untrusted input can reach a read over a high/critical sensitivity
+      data asset.
+    recommended_controls:
+      - leastPrivilege
+      - accessScopeRestriction
+      - inputSanitization
+      - dataClassification
+    owasp_agentic: [T6]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-003
+    title: Actionable external output from untrusted input
+    kind: path
+    category: trust_boundary_violation
+    base_severity: high
+    derivation: >-
+      An untrusted input can drive a send to an external output whose approval
+      gate is absent.
+    recommended_controls:
+      - humanInTheLoop
+      - domainAllowlist
+      - outputFiltering
+    owasp_agentic: [T6]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-006
+    title: Indirect injection via fetchWeb
+    kind: path
+    category: capability_path
+    base_severity: high
+    derivation: >-
+      An untrusted input reaches an agent that fetches external web content
+      without content validation, propagates to another agent, and reaches an
+      external output without approval.
+    recommended_controls:
+      - contentValidation
+      - urlAllowlist
+      - humanInTheLoop
+      - delegationScoping
+    owasp_agentic: [T6, T5]
+    owasp_llm: [LLM01, LLM06]
+    mitre_atlas: [AML.T0051, AML.T0048]
+
+  - id: FH-010
+    title: Code execution reachable from untrusted input
+    kind: path
+    category: capability_path
+    base_severity: high
+    derivation: >-
+      An untrusted input can reach an agent that executes code on a tool whose
+      sandbox is disabled.
+    recommended_controls:
+      - sandboxIsolation
+      - commandAllowlist
+      - humanInTheLoop
+      - dryRunFirst
+    owasp_agentic: [T3]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0050, AML.T0053]
+
+  - id: FH-011
+    title: Destructive modification from untrusted input
+    kind: path
+    category: capability_path
+    base_severity: high
+    derivation: >-
+      An untrusted input can drive a modify or delete over a data asset of at
+      least medium sensitivity through a tool that is neither approval-gated nor
+      reversible.
+    recommended_controls:
+      - humanInTheLoop
+      - dryRunFirst
+      - rollbackReady
+      - softDeleteFallback
+    owasp_agentic: [T6]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-004
+    title: Over-permissioned agent
+    kind: node
+    category: over_permissioned_agent
+    base_severity: high
+    derivation: >-
+      An agent combines direct read access to high/critical sensitivity data
+      with send access to an external output, concentrating privileges that
+      should be separated across roles.
+    recommended_controls:
+      - leastPrivilege
+      - delegationScoping
+    owasp_agentic: [T3]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-005
+    title: Tool with side effect missing approval and rollback
+    kind: node
+    category: missing_control
+    base_severity: high
+    derivation: >-
+      A tool declares a side effect that is not reversible and requires no
+      approval before execution, making any invocation permanently impactful.
+    recommended_controls:
+      - humanInTheLoop
+      - rollbackReady
+      - dryRunFirst
+    owasp_agentic: [T4]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0053]
+
+  - id: FH-007
+    title: Multi-agent chain without intermediate controls
+    kind: path
+    category: lateral_propagation
+    base_severity: high
+    derivation: >-
+      An untrusted input drives a chain of three or more agents linked by
+      delegation or data flow where no agent has an approval gate, reaching an
+      external output without any checkpoint.
+    recommended_controls:
+      - delegationScoping
+      - interAgentAuthentication
+      - humanInTheLoop
+      - contextIsolation
+    owasp_agentic: [T5]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-008
+    title: fetchWeb tool without URL allowlist
+    kind: node
+    category: missing_control
+    base_severity: medium
+    derivation: >-
+      A tool reachable via fetchWeb has no URL allowlist, leaving the calling
+      agent open to attacker-controlled web content and indirect injection.
+    recommended_controls:
+      - contentValidation
+      - urlAllowlist
+    owasp_agentic: [T1]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-009
+    title: Data leak via unvalidated shared-memory write
+    kind: path
+    category: memory_poisoning_propagation
+    base_severity: high
+    derivation: >-
+      An untrusted input reaches an agent that writes to shared or
+      organisation-scoped memory without validation; a second agent reads that
+      memory and performs a side-effectful action on a sensitive asset or
+      external output.
+    recommended_controls:
+      - memoryValidation
+      - memoryScoping
+      - memoryProvenanceCheck
+      - contextIsolation
+    owasp_agentic: [T1]
+    owasp_llm: [LLM03]
+    mitre_atlas: [AML.T0020]
+
+  - id: FH-012
+    title: External publication from untrusted input
+    kind: path
+    category: capability_path
+    base_severity: critical
+    derivation: >-
+      An untrusted input drives a deployRelease or moveResource action whose
+      destination is external; the action is not reversible and has no approval
+      gate.
+    recommended_controls:
+      - humanInTheLoop
+      - changeWindowPolicy
+      - rollbackReady
+    owasp_agentic: [T4]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-013
+    title: Internal data sent to public channel without filtering
+    kind: path
+    category: trust_boundary_violation
+    base_severity: high
+    derivation: >-
+      An agent reads data of at least medium sensitivity from an internal asset
+      and responds or notifies on a public or broadcast output channel without
+      PII redaction or content filtering.
+    recommended_controls:
+      - piiRedaction
+      - outputFiltering
+      - dlpScanner
+    owasp_agentic: [T2]
+    owasp_llm: [LLM02]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-014
+    title: Privilege escalation via unscoped delegation
+    kind: node
+    category: trust_boundary_violation
+    base_severity: high
+    derivation: >-
+      A low-trust or fully autonomous agent delegates to a trusted-core agent or
+      an elevated-scope tool without scoped delegation.
+    recommended_controls:
+      - delegationScoping
+      - interAgentAuthentication
+      - credentialScoping
+    owasp_agentic: [T5]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0053]
+
+  - id: FH-016
+    title: Code execution tool without sandbox
+    kind: node
+    category: missing_control
+    base_severity: critical
+    derivation: >-
+      A tool that accepts executeCode has sandbox isolation disabled, making
+      arbitrary code execution possible even without a full attack path from an
+      untrusted input.
+    recommended_controls:
+      - sandboxIsolation
+      - commandAllowlist
+    owasp_agentic: [T4]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0053]
+
+  # ── Phase E rules ──────────────────────────────────────────────────────────
+
+  - id: FH-015
+    title: Intent ambiguity leads to irreversible action
+    kind: path
+    category: capability_path
+    base_severity: high
+    derivation: >-
+      A full-auto agent interprets ambiguous intent from a non-authenticated
+      input and then performs a destructive or irreversible action without
+      asking for confirmation.
+    recommended_controls:
+      - askForConfirmation
+      - humanInTheLoop
+      - confidenceGating
+    owasp_agentic: [T6, T4]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-017
+    title: Elevated-scope tool reachable from externally-exposed agent
+    kind: node
+    category: missing_control
+    base_severity: high
+    derivation: >-
+      A tool with elevated authentication scope is reachable from an agent
+      whose exposure boundary is external, creating a credential-escalation
+      path from an external entry point.
+    recommended_controls:
+      - credentialScoping
+      - secretsVault
+      - leastPrivilege
+    owasp_agentic: [T3]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0053]
+
+  - id: FH-018
+    title: Data asset without explicit classification
+    kind: node
+    category: compliance_hygiene
+    base_severity: low
+    derivation: >-
+      A data asset carries the default medium sensitivity, indicating it was
+      never explicitly classified. Unclassified assets cannot be correctly
+      scoped or protected.
+    recommended_controls:
+      - dataClassification
+    owasp_agentic: [T2]
+    owasp_llm: [LLM02]
+    mitre_atlas: []
+
+  - id: FH-019
+    title: Full-auto agent over irreversible destructive tool
+    kind: node
+    category: excessive_autonomy
+    base_severity: high
+    derivation: >-
+      A fully-autonomous agent has direct access to a tool whose side effect is
+      both irreversible and not gated on approval, making any invocation
+      permanently impactful without any human checkpoint.
+    recommended_controls:
+      - humanInTheLoop
+      - confidenceGating
+      - dryRunFirst
+    owasp_agentic: [T6, T4]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0053]
+
+  - id: FH-020
+    title: Shared memory without write validation
+    kind: node
+    category: missing_control
+    base_severity: medium
+    derivation: >-
+      A memory node scoped across agents or the organisation has write
+      validation disabled, leaving it open to poisoning by any agent that
+      can write to it.
+    recommended_controls:
+      - memoryValidation
+      - memoryScoping
+      - memoryProvenanceCheck
+    owasp_agentic: [T1]
+    owasp_llm: [LLM03]
+    mitre_atlas: [AML.T0020]
+
+  - id: FH-021
+    title: External input without sanitization or injection detection
+    kind: node
+    category: missing_control
+    base_severity: medium
+    derivation: >-
+      An untrusted input node has neither pre-agent sanitization nor an
+      injection detector, leaving every downstream agent exposed to
+      attacker-crafted content.
+    recommended_controls:
+      - inputSanitization
+      - promptShielding
+      - sourceAuthentication
+    owasp_agentic: [T6]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-022
+    title: External output without content filter or PII redaction
+    kind: node
+    category: missing_control
+    base_severity: medium
+    derivation: >-
+      An external output has no content filter and no PII redaction, so any
+      sensitive data reaching it is sent to the external boundary unfiltered.
+    recommended_controls:
+      - outputFiltering
+      - piiRedaction
+      - dlpScanner
+    owasp_agentic: [T2]
+    owasp_llm: [LLM02]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-023
+    title: Unscoped delegation between agents with disjoint capabilities
+    kind: edge
+    category: lateral_propagation
+    base_severity: medium
+    derivation: >-
+      A delegateTo edge connects two agents without scoped delegation and the
+      target agent has capabilities the source agent lacks, granting implicit
+      privilege escalation through the delegation.
+    recommended_controls:
+      - delegationScoping
+      - interAgentAuthentication
+    owasp_agentic: [T5]
+    owasp_llm: [LLM06]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-024
+    title: dataFlow between agents without intermediate validation
+    kind: edge
+    category: lateral_propagation
+    base_severity: medium
+    derivation: >-
+      A dataFlow edge connects two agents where neither declares a validation
+      guardrail (contentValidation, memoryValidation, extractionValidation),
+      allowing unvalidated data to cross the agent boundary.
+    recommended_controls:
+      - contentValidation
+      - memoryValidation
+      - explicitPrecedenceRules
+    owasp_agentic: [T5]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-025
+    title: Read from external or untrusted data asset without content validation
+    kind: edge
+    category: indirect_injection
+    base_severity: medium
+    derivation: >-
+      An agent reads from a data asset with an external boundary or untrusted
+      sensitivity but has no contentValidation guardrail, exposing the agent
+      to attacker-controlled content.
+    recommended_controls:
+      - contentValidation
+      - urlAllowlist
+      - sandboxedFetch
+    owasp_agentic: [T1, T6]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-026
+    title: GDPR-regulated data asset without consent enforcement
+    kind: node
+    category: compliance_violation
+    base_severity: high
+    derivation: >-
+      A data asset is marked as containing GDPR-regulated data but no
+      consent-enforcement control is applied, potentially violating the
+      requirement for a lawful basis for processing.
+    recommended_controls:
+      - consentEnforcement
+      - regulatoryComplianceCheck
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-027
+    title: Side-effect tool without audit logging
+    kind: node
+    category: compliance_hygiene
+    base_severity: medium
+    derivation: >-
+      A tool with a declared side effect has audit logging disabled, leaving
+      no record of the action's execution for forensics or compliance review.
+    recommended_controls:
+      - auditLogging
+      - immutableLogs
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-028
+    title: Full-auto agent without decision audit trail
+    kind: node
+    category: compliance_hygiene
+    base_severity: medium
+    derivation: >-
+      A fully-autonomous agent makes decisions without a decisionAuditTrail
+      control, leaving autonomous choices unrecorded and non-explainable to
+      auditors.
+    recommended_controls:
+      - decisionAuditTrail
+      - explainability
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-029
+    title: Persistent memory without retention TTL
+    kind: node
+    category: compliance_violation
+    base_severity: medium
+    derivation: >-
+      A memory node with medium-or-higher sensitivity has no retention TTL
+      configured, risking indefinite storage of personal data in violation
+      of data-minimisation obligations.
+    recommended_controls:
+      - retentionTTL
+      - automaticForgetPolicy
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-030
+    title: Silent failure possible in multi-tool chain
+    kind: path
+    category: silent_failure
+    base_severity: medium
+    derivation: >-
+      A path contains two or more side-effect tools without a verifyResult
+      step after the last one and no postConditionCheck control, so a
+      mid-chain failure could go undetected.
+    recommended_controls:
+      - postConditionCheck
+      - endToEndValidation
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-031
+    title: Retry on non-idempotent tool without idempotency key
+    kind: edge
+    category: silent_failure
+    base_severity: high
+    derivation: >-
+      A retry capability is invoked on a tool that is not idempotent and no
+      idempotency-key control is present, meaning repeated invocations may
+      duplicate the side effect.
+    recommended_controls:
+      - idempotencyKey
+      - circuitBreaker
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-032
+    title: Deployment or deletion tool without rollback
+    kind: node
+    category: operational_risk
+    base_severity: high
+    derivation: >-
+      A tool used for deployRelease or deleteResource has its side effect
+      marked as irreversible and no rollbackReady control is applied, making
+      any invocation permanently impactful.
+    recommended_controls:
+      - rollbackReady
+      - dryRunFirst
+      - humanInTheLoop
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []
+
+  - id: FH-033
+    title: Prompt injection detector absent on decision-making input path
+    kind: node
+    category: detection_gap
+    base_severity: medium
+    derivation: >-
+      An untrusted input node feeds a decision-making agent (full_auto or
+      interpretIntent) without an injection detector, leaving the agent
+      vulnerable to prompt injection without any detection layer.
+    recommended_controls:
+      - promptInjectionDetector
+      - promptShielding
+    owasp_agentic: [T6]
+    owasp_llm: [LLM01]
+    mitre_atlas: [AML.T0054]
+
+  - id: FH-034
+    title: DLP scanner absent on sensitive external output
+    kind: node
+    category: detection_gap
+    base_severity: medium
+    derivation: >-
+      An external output receives data read from a medium-or-higher sensitivity
+      asset but has no DLP scanner applied, leaving sensitive data exfiltration
+      undetected.
+    recommended_controls:
+      - dlpScanner
+      - piiRedaction
+      - outputFiltering
+    owasp_agentic: [T2]
+    owasp_llm: [LLM02]
+    mitre_atlas: [AML.T0048]
+
+  - id: FH-035
+    title: Anomaly detection absent on full-auto agent
+    kind: node
+    category: detection_gap
+    base_severity: low
+    derivation: >-
+      A fully-autonomous agent operates without an anomaly-detection control,
+      providing no visibility into unexpected or adversarially-induced behaviour
+      deviations.
+    recommended_controls:
+      - anomalyDetection
+      - auditLogging
+    owasp_agentic: []
+    owasp_llm: []
+    mitre_atlas: []

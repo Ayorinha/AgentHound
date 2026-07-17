@@ -1,0 +1,55 @@
+# Example 5 - Support triage, risky/safe pair (Dify, RISKY variant). Literal copy of the
+# original prototype fixture; loads without changes.
+# Expected findings (risky): FH-003 (external output via http-request from untrusted input).
+# Note: the "Internal Knowledge" retrieval is medium-sensitivity, so this Dify variant does not
+# fire FH-002 (unlike the CrewAI pair, which uses a high-sensitivity internal Drive).
+app:
+  name: "Risky Support Workflow"
+  mode: workflow
+kind: app
+version: 0.1.5
+workflow:
+  features: {}
+  graph:
+    nodes:
+      - id: start
+        data:
+          type: start
+          title: Start
+      - id: llm
+        data:
+          type: llm
+          title: Support Agent
+      - id: knowledge
+        data:
+          type: knowledge-retrieval
+          title: Internal Knowledge
+      - id: request
+        data:
+          type: http-request
+          title: External Webhook
+      - id: answer
+        data:
+          type: answer
+          title: Final Answer
+    edges:
+      - source: start
+        target: llm
+        data:
+          sourceType: start
+          targetType: llm
+      - source: llm
+        target: knowledge
+        data:
+          sourceType: llm
+          targetType: knowledge-retrieval
+      - source: llm
+        target: request
+        data:
+          sourceType: llm
+          targetType: http-request
+      - source: request
+        target: answer
+        data:
+          sourceType: http-request
+          targetType: answer

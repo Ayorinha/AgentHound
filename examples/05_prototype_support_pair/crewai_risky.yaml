@@ -1,0 +1,34 @@
+# Example 5 - Support triage, risky/safe pair (CrewAI). Migrated from the original prototype
+# two-file fixture (agents + tasks), merged into the
+# single-file agents:/tasks: format required by the current adapter.
+# Expected findings (risky): FH-002 (reachable sensitive read) + FH-003 (external output from untrusted input).
+name: Support Triage Crew (risky)
+agents:
+  support_agent:
+    role: "Support Agent"
+    goal: "Resolve inbound support requests"
+    backstory: "Agent with email and document access."
+    inputs:
+      - name: "Inbound support email"
+        kind: external_email
+        trust_level: untrusted
+        content_types:
+          - text
+          - attachment
+    tools:
+      - name: "drive.read"
+        operation_kind: read
+        access_kind: internal_read
+        reads_asset:
+          name: "Internal Drive"
+          asset_kind: drive_folder
+          sensitivity: high
+      - name: "gmail.send"
+        operation_kind: send
+        access_kind: external_send
+        side_effect: true
+tasks:
+  triage_task:
+    description: "Read support email, consult internal docs if needed, and reply."
+    expected_output: "An outbound email response"
+    agent: support_agent
