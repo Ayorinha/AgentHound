@@ -40,6 +40,7 @@ import type { IconProps } from "@telefonica/mistica";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import InlineError from "@/components/ui/InlineError";
 import { severityAccentColor } from "@/lib/threatModelColors";
+import { formatSnakeCase } from "@/lib/format";
 import { SEVERITY_STYLES } from "@/lib/severity";
 import type { AnalysisResult, ChokepointRec } from "@/lib/api/adapters";
 import {
@@ -86,18 +87,27 @@ interface BeforeAfterCardProps {
   Icon: (props: IconProps) => ReactElement;
   color: string;
   rows: { label: string; value: string | number; color?: string }[];
+  headerBadge?: { label: string; value: string | number; color: string };
 }
 
-function BeforeAfterCard({ label, Icon, color, rows }: BeforeAfterCardProps) {
+function BeforeAfterCard({ label, Icon, color, rows, headerBadge }: BeforeAfterCardProps) {
   return (
     <Boxed>
       <Box paddingX={20} paddingY={20}>
         <Stack space={16}>
-          <Inline space={12} alignItems="center">
-            <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
-              <Icon size={18} color={color} />
-            </Circle>
-            <Text2 medium color={color}>{label}</Text2>
+          <Inline space="between" alignItems="center">
+            <Inline space={12} alignItems="center">
+              <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
+                <Icon size={18} color={color} />
+              </Circle>
+              <Text2 medium color={color}>{label}</Text2>
+            </Inline>
+            {headerBadge && (
+              <Inline space={4} alignItems="baseline">
+                <Text2 medium color={headerBadge.color}>{headerBadge.value}</Text2>
+                <Text1 regular color={skinVars.colors.textSecondary}>{headerBadge.label}</Text1>
+              </Inline>
+            )}
           </Inline>
           <Divider />
           <Stack space={8}>
@@ -131,7 +141,7 @@ function FindingCard({ finding, isDarkMode, tSeverity, scoreLabel }: FindingCard
             <Inline space={8} alignItems="center" wrap verticalSpace={4}>
               <SeverityBadge severity={finding.severity} small>{tSeverity(finding.severity)}</SeverityBadge>
               <Text1 medium color={skinVars.colors.textSecondary}>{finding.ruleId}</Text1>
-              <Tag type="inactive" small>{finding.category}</Tag>
+              <Tag type="inactive" small>{formatSnakeCase(finding.category)}</Tag>
             </Inline>
             <Text2 medium color={accent}>{scoreLabel}: {finding.score}</Text2>
           </Inline>
@@ -139,11 +149,13 @@ function FindingCard({ finding, isDarkMode, tSeverity, scoreLabel }: FindingCard
             <Text2 medium>{finding.title}</Text2>
             {finding.desc && <Text1 regular color={skinVars.colors.textSecondary}>{finding.desc}</Text1>}
             {finding.evidence && Object.keys(finding.evidence).length > 0 && (
-              <Text1 regular color={skinVars.colors.textSecondary}>
-                {Object.entries(finding.evidence)
-                  .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join("/") : value}`)
-                  .join(" · ")}
-              </Text1>
+              <Inline space={4} wrap verticalSpace={4}>
+                {Object.entries(finding.evidence).map(([key, value]) => (
+                  <Tag key={key} small type="inactive">
+                    {`${formatSnakeCase(key)}: ${Array.isArray(value) ? value.join("/") : value}`}
+                  </Tag>
+                ))}
+              </Inline>
             )}
           </Stack>
           {hasRefs && (
@@ -167,7 +179,6 @@ function ChokepointCallout({ rec }: { rec: ChokepointRec }) {
       description={t("chokepointDesc", {
         control: rec.controlName,
         node: rec.targetNodeLabel,
-        reduction: rec.estimatedReduction,
         pct: rec.riskReductionPct,
         cost: rec.costEstimate,
       })}
@@ -206,9 +217,6 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
   return (
     <Stack space={32}>
       <Stack space={4}>
-        {!hideTitle && result.name && (
-          <Text1 regular color={skinVars.colors.textSecondary}>{t("title")}</Text1>
-        )}
         {!hideTitle && <Text4 medium as="h1">{result.name || t("title")}</Text4>}
         <Text2 regular color={skinVars.colors.textSecondary}>
           {t("subtitleTemplate", {
@@ -249,6 +257,8 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
               appliedControlCount={solved && sol ? sol.appliedControlCount : undefined}
               nodeControlInfo={solved && sol ? sol.nodeControlInfo : undefined}
               edgeControlInfo={solved && sol ? sol.edgeControlInfo : undefined}
+              onToggleView={() => setTab(solved ? 0 : 1)}
+              solutionAvailable={Boolean(sol)}
             />
           </Stack>
 
@@ -328,7 +338,6 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.before.findingCount, color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.before.criticalCount, color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.before.maxScore, color: severityAccentColor("critical", isDarkMode) },
-                      { label: t("beforeAfter.riskScoreTotal"), value: sol.beforeAfter.before.riskScoreTotal },
                     ]}
                   />
                   <IconArrowLineRightRegular color={skinVars.colors.brand} />
@@ -336,11 +345,15 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                     label={t("after")}
                     Icon={IconShieldCheckedOkRegular}
                     color={severityAccentColor("none", isDarkMode)}
+                    headerBadge={{
+                      label: t("beforeAfter.riskReduction"),
+                      value: `-${sol.beforeAfter.after.riskReductionPct}%`,
+                      color: severityAccentColor("none", isDarkMode),
+                    }}
                     rows={[
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.after.findingCount, color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.after.criticalCount, color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.after.maxScore, color: severityAccentColor("none", isDarkMode) },
-                      { label: t("beforeAfter.riskReduction"), value: sol.beforeAfter.after.riskReduction, color: severityAccentColor("none", isDarkMode) },
                     ]}
                   />
                 </Inline>
@@ -396,7 +409,9 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                             >
                               <Stack space={2}>
                                 <Text2 medium>{step.title}</Text2>
-                                <Text1 regular color={skinVars.colors.textSecondary}>{step.desc}</Text1>
+                                {step.desc.map((line, i) => (
+                                  <Text1 key={i} regular color={skinVars.colors.textSecondary}>{line}</Text1>
+                                ))}
                               </Stack>
                             </TimelineItem>
                           ))}
@@ -417,7 +432,6 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                                 <Inline space={8} alignItems="center">
                                   <IconCheckFilled color={skinVars.colors.success} />
                                   <Text2 medium>{f.ruleId} — {f.title}</Text2>
-                                  <Tag type="success">{t("resolved")}</Tag>
                                 </Inline>
                                 <Inline space={4} wrap verticalSpace={4}>
                                   {f.controls?.map((c) => <Tag key={c} type="success" small>{c}</Tag>)}

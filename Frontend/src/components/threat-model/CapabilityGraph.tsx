@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box, Boxed, Inline, Stack, Text1, IconSearchRegular, skinVars, useTheme } from "@telefonica/mistica";
 import NodeDetailDrawer from "@/components/threat-model/NodeDetailDrawer";
-import CyberGraph from "@/components/threat-model/graph/CyberGraph";
+import CyberGraph, { type CyberGraphHandle } from "@/components/threat-model/graph/CyberGraph";
 import { primaryRoute, primaryRouteId } from "@/components/threat-model/graph/toReactFlow";
 import { NODE_STYLE } from "@/components/threat-model/graph/cyberGraphTheme";
 import { severityAccentColor } from "@/lib/threatModelColors";
@@ -25,13 +25,21 @@ interface CapabilityGraphProps {
    * whether each control blocks or reinforces the hop. */
   nodeControlInfo?: Record<string, ControlInfo[]>;
   edgeControlInfo?: Record<string, ControlInfo[]>;
+  /** Switches the parent's Findings/Solution tab. Passed through to the canvas
+   * toolbar so the view can be swapped without leaving fullscreen, where the
+   * tabs above the graph aren't reachable. */
+  onToggleView?: () => void;
+  /** Whether the Proposed Solution tab has data to show; when it doesn't,
+   * toggling into it must leave fullscreen so the "unavailable" notice is visible. */
+  solutionAvailable?: boolean;
 }
 
-function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, appliedControlCount, nodeControlInfo, edgeControlInfo }: CapabilityGraphProps) {
+function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, appliedControlCount, nodeControlInfo, edgeControlInfo, onToggleView, solutionAvailable }: CapabilityGraphProps) {
   const t = useTranslations("results");
   const tNode = useTranslations("node");
   const { isDarkMode } = useTheme();
   const [focusedNode, setFocusedNode] = useState<GraphNode | null>(null);
+  const graphRef = useRef<CyberGraphHandle>(null);
 
   // Recommended controls per node id, from the findings whose path runs through
   // it. Used as a fallback in the findings view; the solved view passes the
@@ -89,12 +97,15 @@ function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, applie
     fit: t("fitView"),
     fullscreen: t("fullscreen"),
     exitFullscreen: t("exitFullscreen"),
+    viewFindings: t("tabFindings"),
+    viewSolution: t("tabProposedSolution"),
     download: t("downloadPng"),
     legendSafe: t("legend.safe"),
     legendBlocked: t("legend.blocked"),
     legendMitigated: t("legend.mitigated"),
     legendPathSeverity: t("legend.pathSeverity"),
     legendPrimaryRoute: t("legend.primaryRoute", { id: primaryRouteId(attacks) }),
+    legendCritical: t("legend.critical"),
     legendHigh: t("legend.high"),
     legendMedium: t("legend.medium"),
     legendLow: t("legend.low"),
@@ -123,6 +134,7 @@ function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, applie
       </Inline>
 
       <CyberGraph
+        ref={graphRef}
         solved={solved}
         nodes={nodes}
         edges={edges}
@@ -131,6 +143,8 @@ function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, applie
         nodeControls={nodeControls}
         edgeControls={edgeControls}
         onNodeClick={setFocusedNode}
+        onToggleView={onToggleView}
+        solutionAvailable={solutionAvailable}
         labels={labels}
       />
 
@@ -193,7 +207,16 @@ function CapabilityGraph({ solved, nodes, edges, findings, attacks, name, applie
         </Boxed>
       )}
 
-      {focusedNode && <NodeDetailDrawer node={focusedNode} findings={findings} onClose={() => setFocusedNode(null)} />}
+      {focusedNode && (
+        <NodeDetailDrawer
+          node={focusedNode}
+          findings={findings}
+          onClose={() => {
+            setFocusedNode(null);
+            graphRef.current?.restoreFullscreen();
+          }}
+        />
+      )}
     </Stack>
   );
 }

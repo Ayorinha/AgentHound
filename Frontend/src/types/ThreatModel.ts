@@ -112,6 +112,6 @@ export interface NodeDetail {
 
 export interface RemediationStep {
   title: string;
-  desc: string;
+  desc: string[];
   done: boolean;
 }

@@ -4,6 +4,7 @@ import { Box, Boxed, Drawer, Inline, Stack, Tag, Text1, skinVars, useTheme } fro
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import { propPositive } from "@/lib/api/adapters";
 import { severityAccentColor } from "@/lib/threatModelColors";
+import { formatSnakeCase } from "@/lib/format";
 import type { Finding, GraphNode, NodeProp } from "@/types/ThreatModel";
 
 interface NodeDetailDrawerProps {
@@ -125,7 +126,7 @@ function NodeDetailDrawer({ node, findings, onClose }: NodeDetailDrawerProps) {
                     <Stack space={4}>
                       <Inline space={8} alignItems="center">
                         <Tag type="error" small>{f.ruleId}</Tag>
-                        <Tag type="inactive" small>{f.category}</Tag>
+                        <Tag type="inactive" small>{formatSnakeCase(f.category)}</Tag>
                         <SeverityBadge severity={f.severity} small>{tSeverity(f.severity)}</SeverityBadge>
                         <Text1 medium color={severityAccentColor(f.severity, isDarkMode)}>{f.score}</Text1>
                       </Inline>
@@ -140,7 +141,7 @@ function NodeDetailDrawer({ node, findings, onClose }: NodeDetailDrawerProps) {
                           <Text1 medium color={skinVars.colors.textSecondary}>{t("evidence")}</Text1>
                           {Object.entries(f.evidence).map(([key, value]) => (
                             <Inline key={key} space={8}>
-                              <Text1 regular color={skinVars.colors.textSecondary}>{key}:</Text1>
+                              <Text1 regular color={skinVars.colors.textSecondary}>{formatSnakeCase(key)}:</Text1>
                               <Text1 regular>{Array.isArray(value) ? value.join(", ") : String(value)}</Text1>
                             </Inline>
                           ))}

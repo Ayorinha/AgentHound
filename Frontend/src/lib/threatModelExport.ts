@@ -151,7 +151,7 @@ export function downloadMarkdownReport(result: AnalysisResult, view: GraphView):
       "## Proposed Solution",
       "",
       `- **Controls applied:** ${sol.appliedControlCount}`,
-      `- **Risk reduction:** ${after.riskReduction}`,
+      `- **Risk reduction:** ${after.riskReductionPct}%`,
       "",
       "| Metric | Before | After |",
       "| --- | --- | --- |",
@@ -163,7 +163,7 @@ export function downloadMarkdownReport(result: AnalysisResult, view: GraphView):
     if (sol.remediation.length > 0) {
       out.push("### Remediation", "");
       for (const step of sol.remediation) {
-        out.push(`- **${step.title}** — ${step.desc}`);
+        out.push(`- **${step.title}** — ${step.desc.join(" · ")}`);
       }
       out.push("");
     }

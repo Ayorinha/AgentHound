@@ -1,7 +1,7 @@
 "use client";
 import "@xyflow/react/dist/style.css";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -23,7 +23,14 @@ import { cyber, getSeverityPath, NODE_STYLE, useIsDarkMode, type PathSeverity } 
 import { GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
 import { edgeTypes, SeverityPathContext } from "@/components/threat-model/graph/edgeTypes";
 import { buildGraph, type CyberNode } from "@/components/threat-model/graph/toReactFlow";
-import { elkLayout } from "@/components/threat-model/graph/elkLayout";
+import { dagreLayout } from "@/components/threat-model/graph/dagreLayout";
+
+/** Imperative handle so the parent (which owns the node-detail Drawer's open
+ * state) can put the canvas back into fullscreen once the Drawer it forced
+ * shut has fully closed. */
+export interface CyberGraphHandle {
+  restoreFullscreen: () => void;
+}
 
 export interface CyberGraphProps {
   solved: boolean;
@@ -38,18 +45,27 @@ export interface CyberGraphProps {
   /** Controls (with effect) per edge id — surfaced in the path padlock tooltip. */
   edgeControls: Record<string, ControlInfo[]>;
   onNodeClick: (node: GraphNode) => void;
+  /** Switches the parent's Findings/Solution tab; rendered as a toolbar button
+   * inside the canvas so the view can be swapped without leaving fullscreen. */
+  onToggleView?: () => void;
+  /** Whether the Proposed Solution tab has data; toggling into it while false
+   * leaves fullscreen so the "unavailable" notice above the canvas is visible. */
+  solutionAvailable?: boolean;
   labels: {
     playAttack: string;
     stop: string;
     fit: string;
     fullscreen: string;
     exitFullscreen: string;
+    viewFindings: string;
+    viewSolution: string;
     download: string;
     legendSafe: string;
     legendBlocked: string;
     legendMitigated: string;
     legendPathSeverity: string;
     legendPrimaryRoute: string;
+    legendCritical: string;
     legendHigh: string;
     legendMedium: string;
     legendLow: string;
@@ -81,7 +97,10 @@ function exitFullscreen() {
   void (d.exitFullscreen ?? d.webkitExitFullscreen)?.call(d);
 }
 
-function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls, onNodeClick, labels }: CyberGraphProps) {
+const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
+  { solved, nodes, edges, attacks, name, nodeControls, edgeControls, onNodeClick, onToggleView, solutionAvailable, labels },
+  ref,
+) {
   const isDark = useIsDarkMode();
   const severityPath = useMemo(() => getSeverityPath(isDark), [isDark]);
   const built = useMemo(
@@ -114,7 +133,23 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
     });
     return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe };
   }, [built.edges]);
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(built.nodes);
+
+  // Refine node positions with a dagre `layered` layout (React Flow's official
+  // dagre approach): dagre reorders nodes within their type-column to minimise
+  // edge crossings; we keep the curved edges. Computed synchronously as
+  // derived state (dagre, unlike the previous elkjs layout, has no async step)
+  // so the first paint already shows the final layout instead of flashing the
+  // swimlane fallback from buildGraph.
+  const dagrePositions = useMemo(() => {
+    const real = nodes.filter((n) => n.type !== "control");
+    return real.length > 0 ? dagreLayout(real, edges) : new Map<string, { x: number; y: number }>();
+  }, [nodes, edges]);
+  const layoutedNodes = useMemo(
+    () => built.nodes.map((n) => (dagrePositions.has(n.id) ? { ...n, position: dagrePositions.get(n.id)! } : n)),
+    [built.nodes, dagrePositions],
+  );
+
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(built.edges);
   const [playStep, setPlayStep] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -134,6 +169,16 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
       target.removeEventListener("webkitfullscreenchange", onChange);
     };
   }, []);
+  // Set right before we force-exit fullscreen to open the node detail Drawer,
+  // so it can be put back once the parent tells us that Drawer has closed.
+  const wasFullscreenRef = useRef(false);
+  useImperativeHandle(ref, () => ({
+    restoreFullscreen: () => {
+      if (wasFullscreenRef.current && canvasRef.current) requestFullscreen(canvasRef.current);
+      wasFullscreenRef.current = false;
+    },
+  }), []);
+
   const toggleFullscreen = useCallback(() => {
     if (fullscreenElement()) {
       exitFullscreen();
@@ -142,10 +187,23 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
     }
   }, []);
 
+  // Lets the canvas toolbar swap Findings ↔ Solution without leaving
+  // fullscreen — unless there's no solution to show, in which case we leave
+  // fullscreen so the "unavailable" notice above the canvas becomes visible.
+  const handleToggleView = useCallback(() => {
+    if (!onToggleView) return;
+    if (!solved && !solutionAvailable) exitFullscreen();
+    onToggleView();
+  }, [onToggleView, solved, solutionAvailable]);
+
+  // Re-fit whenever the (already dagre-positioned) nodes change or fullscreen
+  // is toggled. A single rAF is enough: `layoutedNodes`/`built` are derived
+  // during render (see above and the reset block below), so by the time this
+  // effect runs the DOM already reflects the final layout in a single commit.
   useEffect(() => {
     const raf = requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }));
     return () => cancelAnimationFrame(raf);
-  }, [isFullscreen, fitView]);
+  }, [layoutedNodes, isFullscreen, fitView]);
 
   // Reset the canvas whenever the source graph changes (e.g. Findings ↔ Solution).
   // Done during render via the "adjust state on prop change" pattern rather than
@@ -153,7 +211,7 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
   const [prevBuilt, setPrevBuilt] = useState(built);
   if (prevBuilt !== built) {
     setPrevBuilt(built);
-    setRfNodes(built.nodes);
+    setRfNodes(layoutedNodes);
     setRfEdges(built.edges);
     setPlayStep(null);
   }
@@ -165,26 +223,6 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
   }, []);
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-
-  // Refine node positions with an ELK `layered` layout (React Flow's official
-  // elkjs approach): ELK reorders nodes within their type-column to minimise edge
-  // crossings; we keep the curved edges. The swimlane positions from buildGraph
-  // act as the synchronous fallback until ELK resolves.
-  useEffect(() => {
-    let cancelled = false;
-    const real = nodes.filter((n) => n.type !== "control");
-    if (real.length === 0) return;
-    void elkLayout(real, edges).then((pos) => {
-      if (cancelled || pos.size === 0) return;
-      setRfNodes((prev) =>
-        prev
-          .filter((n): n is CyberNode => n.type === "cyber")
-          .map((n) => (pos.has(n.id) ? { ...n, position: pos.get(n.id)! } : n)),
-      );
-      window.requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }));
-    });
-    return () => { cancelled = true; };
-  }, [nodes, edges, setRfNodes, fitView]);
 
   const play = useCallback(() => {
     if (built.attackNodeIds.length === 0) return;
@@ -280,7 +318,14 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
         onEdgesChange={onEdgesChange}
         onNodeClick={(_, node) => {
           const data = (node as CyberNode).data;
-          if (data?.gnode) onNodeClick(data.gnode);
+          if (!data?.gnode) return;
+          // The node detail Drawer portals to document.body, outside the native
+          // fullscreen element, so it would stay invisible if left open here.
+          if (isFullscreen) {
+            wasFullscreenRef.current = true;
+            exitFullscreen();
+          }
+          onNodeClick(data.gnode);
         }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -324,6 +369,13 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
                 <ToolbarButton onClick={play} label={labels.playAttack} accent={cyber.danger} glyph="▶" />
               )
             )}
+            {isFullscreen && onToggleView && (
+              <ToolbarButton
+                onClick={handleToggleView}
+                label={solved ? labels.viewFindings : labels.viewSolution}
+                glyph="⇄"
+              />
+            )}
             <ToolbarButton onClick={() => fitView({ padding: 0.08, duration: 400 })} label={labels.fit} glyph="⤢" />
             <ToolbarButton onClick={download} label={labels.download} glyph="↓" />
           </div>
@@ -345,6 +397,7 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
                 {legendState.hasPrimaryRoute && (
                   <LegendRow color={severityPath.critical.color} glowColor={severityPath.critical.glow} text={labels.legendPrimaryRoute} dashed glow />
                 )}
+                {legendState.severities.has("critical") && <LegendRow color={severityPath.critical.color} text={labels.legendCritical} />}
                 {legendState.severities.has("high") && <LegendRow color={severityPath.high.color} text={labels.legendHigh} />}
                 {legendState.severities.has("medium") && <LegendRow color={severityPath.medium.color} text={labels.legendMedium} />}
                 {legendState.severities.has("low") && <LegendRow color={severityPath.low.color} text={labels.legendLow} />}
@@ -369,7 +422,7 @@ function Flow({ solved, nodes, edges, attacks, name, nodeControls, edgeControls,
       </SeverityPathContext.Provider>
     </div>
   );
-}
+});
 
 function ToolbarButton({ onClick, label, glyph, accent }: { onClick: () => void; label: string; glyph: string; accent?: string }) {
   return (
@@ -593,10 +646,12 @@ const CYBER_CSS = `
 }
 `;
 
-export default function CyberGraph(props: CyberGraphProps) {
+const CyberGraph = forwardRef<CyberGraphHandle, CyberGraphProps>(function CyberGraph(props, ref) {
   return (
     <ReactFlowProvider>
-      <Flow {...props} />
+      <Flow {...props} ref={ref} />
     </ReactFlowProvider>
   );
-}
+});
+
+export default CyberGraph;

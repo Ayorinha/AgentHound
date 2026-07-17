@@ -42,13 +42,6 @@ export const GLYPH: Record<NodeType, (color: string, size?: number) => React.Rea
   output: svg(<><path d="M21 3L11 13M21 3l-6.5 18-4-8-8-4L21 3z" /></>),
 };
 
-/** "input_validation" -> "Input validation" — the category is a free-form
- * catalog string (45 controls), so this formats it without a per-value i18n map. */
-export function formatCategory(category: string): string {
-  const spaced = category.replace(/_/g, " ");
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
 /** One control line in the padlock hover tooltip: its name plus a colour-coded
  * effect tag (Blocks / Mitigates), so the control that cuts the route reads
  * apart from the ones that only reinforce it. Kept deliberately compact — the

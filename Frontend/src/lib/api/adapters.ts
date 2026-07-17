@@ -10,6 +10,7 @@
  * static backdrop columns drawn by `CapabilityGraph`.
  */
 
+import { formatSnakeCase } from "@/lib/format";
 import type { Severity } from "@/lib/severity";
 import type {
   Attack,
@@ -319,17 +320,16 @@ export interface AnalysisCounts {
 
 /** Before/after metrics for the Proposed Solution tab, shaped for direct
  * rendering (spec section 12.6). `riskScoreTotal` is the summed score of the
- * before-findings; `riskReduction` is a ready-to-display "N% · −X pts" string. */
+ * before-findings; `riskReductionPct` is the percentage drop (0–100), rounded. */
 export interface BeforeAfter {
   before: { findingCount: number; criticalCount: number; maxScore: number; riskScoreTotal: number };
-  after: { findingCount: number; criticalCount: number; maxScore: number; riskReduction: string };
+  after: { findingCount: number; criticalCount: number; maxScore: number; riskReductionPct: number };
 }
 
 /** The single highest-impact control recommendation (doc 03 §choke-point). */
 export interface ChokepointRec {
   controlName: string;
   targetNodeLabel: string;
-  estimatedReduction: number;
   /** Percentage of total risk score eliminated by this one control (0–100). */
   riskReductionPct: number;
   /** Number of finding paths broken by this control. */
@@ -452,17 +452,18 @@ export function toAnalyzedResult(resp: AnalyzeResponse): AnalysisResult {
 
 // --- Phase 2: proposed solution ----------------------------------------------
 
-function remediationDesc(rec: ControlRecommendation, breaksRuleIds: string[]): string {
-  const parts = [`Cost: ${rec.cost_estimate}.`];
-  if (rec.estimated_risk_reduction > 0) {
-    parts.push(`Risk reduction: −${rec.estimated_risk_reduction} pts.`);
+function remediationDesc(rec: ControlRecommendation, breaksRuleIds: string[], riskScoreTotal: number): string[] {
+  const parts = [`Cost: ${formatSnakeCase(rec.cost_estimate)}`];
+  if (rec.estimated_risk_reduction > 0 && riskScoreTotal > 0) {
+    const pct = Math.round((100 * rec.estimated_risk_reduction) / riskScoreTotal);
+    parts.push(`Risk reduction: −${pct}%`);
   }
   if (breaksRuleIds.length > 0) {
-    parts.push(`Resolves ${breaksRuleIds.join(", ")}.`);
+    parts.push(`Resolves ${breaksRuleIds.join(", ")}`);
   } else {
-    parts.push("Lowers the score of the paths it crosses.");
+    parts.push("Lowers the score of the paths it crosses");
   }
-  return parts.join(" ");
+  return parts;
 }
 
 /** Map the ranked recommendations to remediation-timeline steps. Every
@@ -474,6 +475,7 @@ export function toRemediationSteps(
   recommendations: ControlRecommendation[],
   nodeLabelById: Map<string, string>,
   ruleIdByFindingId: Map<string, string>,
+  riskScoreTotal: number,
 ): RemediationStep[] {
   return recommendations.map((rec) => {
     const target = nodeLabelById.get(rec.target_node_id) ?? rec.target_node_id;
@@ -482,7 +484,7 @@ export function toRemediationSteps(
     );
     return {
       title: `${rec.name} on ${target}`,
-      desc: remediationDesc(rec, breaksRuleIds),
+      desc: remediationDesc(rec, breaksRuleIds, riskScoreTotal),
       done: true,
     };
   });
@@ -502,7 +504,7 @@ export function toSolutionResult(
   const findingById = new Map(base.findings.map((f) => [f.id, f]));
   const recByControlId = new Map(recommendations.map((r) => [r.control_id, r]));
   const riskScoreTotal = Number(base.findings.reduce((sum, f) => sum + f.score, 0).toFixed(1));
-  const { absolute, percentage } = sim.risk_reduction;
+  const { percentage } = sim.risk_reduction;
 
   const brokenIds = new Set(sim.broken_paths.map((b) => b.finding_id));
   const attacks = base.attacks.filter((a) => brokenIds.has(a.id));
@@ -540,15 +542,14 @@ export function toSolutionResult(
       ? {
           controlName: topRec.name,
           targetNodeLabel: nodeLabelById.get(topRec.target_node_id) ?? topRec.target_node_id,
-          estimatedReduction: topRec.estimated_risk_reduction,
           riskReductionPct: Math.round((100 * topRec.estimated_risk_reduction) / riskScoreTotal),
           breaksFindingCount: topRec.breaks_findings.length,
-          costEstimate: topRec.cost_estimate,
+          costEstimate: formatSnakeCase(topRec.cost_estimate),
         }
       : null;
 
   return {
-    remediation: toRemediationSteps(recommendations, nodeLabelById, ruleIdByFindingId),
+    remediation: toRemediationSteps(recommendations, nodeLabelById, ruleIdByFindingId, riskScoreTotal),
     beforeAfter: {
       before: {
         findingCount: sim.before.finding_count,
@@ -560,7 +561,7 @@ export function toSolutionResult(
         findingCount: sim.after.finding_count,
         criticalCount: sim.after.critical_count,
         maxScore: sim.after.max_score,
-        riskReduction: `${percentage}% · −${absolute} pts`,
+        riskReductionPct: Math.round(percentage),
       },
     },
     nodes: toGraphNodes(sim.graph.nodes),

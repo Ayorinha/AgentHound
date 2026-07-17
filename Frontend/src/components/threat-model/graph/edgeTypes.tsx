@@ -17,7 +17,8 @@ import type { ControlInfo } from "@/types/ThreatModel";
 // individually.
 export const SeverityPathContext = createContext<Record<PathSeverity, { color: string; glow: string }>>(SEVERITY_PATH);
 import type { CyberEdgeData, CyberEdge, EffectLabels } from "@/components/threat-model/graph/toReactFlow";
-import { ControlTipItem, formatCategory } from "@/components/threat-model/graph/nodeTypes";
+import { ControlTipItem } from "@/components/threat-model/graph/nodeTypes";
+import { formatSnakeCase } from "@/lib/format";
 
 /** Full detail for one applied control: name/effect (as in the hover tooltip)
  * plus its catalog category and the findings it actually breaks — the "why"
@@ -40,7 +41,7 @@ function ControlDetailRow({ control, effectLabels }: { control: ControlInfo; eff
               </Tag>
             )}
           </Inline>
-          {control.category && <Tag type="inactive" small>{formatCategory(control.category)}</Tag>}
+          {control.category && <Tag type="inactive" small>{formatSnakeCase(control.category)}</Tag>}
           {control.findings && control.findings.length > 0 && (
             <Stack space={4}>
               {control.findings.map((f) => (
