@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Comma-separated list of extra allowed origins (e.g. for a non-localhost
+      # deployment). Left unset by default: the backend already allows any
+      # localhost/127.0.0.1 origin, which covers the frontend published below.
+      AGENTHOUND_CORS_ORIGINS: ${AGENTHOUND_CORS_ORIGINS:-}
+    volumes:
+      - backend-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./Frontend
+      args:
+        # Resolved in the browser, so it must point at the backend's
+        # host-published port, not the in-network service name.
+        NEXT_PUBLIC_AGENTHOUND_API_URL: ${NEXT_PUBLIC_AGENTHOUND_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-data:
