@@ -2,7 +2,7 @@
 
 AgentHound analyzes multi-agent architecture definitions (CrewAI, Dify, LangGraph, generic YAML) for capability paths that lead to risk, following a BloodHound-style model: typed capability edges between nodes, risk evaluated on the combination of capabilities, node properties, and missing controls.
 
-![AgentHound capability graph showing an attack path from an untrusted public web form through the screener agents to an external gmail_send output](Docs/capability-graph.png)
+![AgentHound capability graph showing an attack path from an untrusted public web form through the screener agents to an external gmail_send output](examples/capability-graph.png)
 
 "Generic YAML" is not a third-party framework but AgentHound's own explicit `nodes`/`edges` format: a thin authoring layer over the internal model that the framework adapters also target, and the most expressive of the four (it can describe full capability paths the tree-shaped adapter outputs cannot). It is auto-detected from top-level `nodes` and `edges`.
 
